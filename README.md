@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🦅 Project FALCON
 
 **Financial AI Logic for Chart Observation & Navigation**
@@ -40,3 +41,7 @@ Status: **Under Development**
 Project Owner: **Dr. Amitabh Kumar**
 
 Developed with assistance from ChatGPT.
+=======
+# FALCON
+FOR MY ALGO
+>>>>>>> 374fcca3a26a52ba93f91cf7e914f383f869ed6f
