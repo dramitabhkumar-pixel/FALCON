@@ -2,25 +2,14 @@
 =========================================================
 Project FALCON
 Swing Detection Engine
-Version : 1.1
+Version : 1.2
 Author  : Amitabh Kumar
 =========================================================
 """
 
-from dataclasses import dataclass
-from typing import Optional
-
 import pandas as pd
 
-
-@dataclass
-class SwingPoint:
-    """Represents a detected swing point."""
-
-    index: int
-    datetime: Optional[pd.Timestamp]
-    price: float
-    swing_type: str
+from models.swing import SwingPoint
 
 
 class SwingEngine:
@@ -29,7 +18,6 @@ class SwingEngine:
     """
 
     def __init__(self, left_bars: int = 3, right_bars: int = 3):
-
         self.left_bars = left_bars
         self.right_bars = right_bars
 
@@ -37,17 +25,17 @@ class SwingEngine:
 
     def validate_dataframe(self, df: pd.DataFrame) -> None:
         """
-        Validate dataframe before processing.
+        Validate OHLC dataframe.
         """
 
         required = ["Open", "High", "Low", "Close"]
 
         for column in required:
             if column not in df.columns:
-                raise ValueError(f"Missing column : {column}")
+                raise ValueError(f"Missing column: {column}")
 
         if df.empty:
-            raise ValueError("Empty dataframe.")
+            raise ValueError("Input dataframe is empty.")
 
         minimum = self.left_bars + self.right_bars + 1
 
@@ -60,7 +48,7 @@ class SwingEngine:
 
     def detect_swings(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Detect swing highs and lows.
+        Detect Swing Highs and Swing Lows.
         """
 
         self.validate_dataframe(df)
@@ -91,9 +79,9 @@ class SwingEngine:
                 i + 1:i + self.right_bars + 1
             ]["Low"]
 
-            # -----------------------------
+            # ----------------------------
             # Swing High
-            # -----------------------------
+            # ----------------------------
 
             if (
                 current_high > left_highs.max()
@@ -109,9 +97,9 @@ class SwingEngine:
                     }
                 )
 
-            # -----------------------------
+            # ----------------------------
             # Swing Low
-            # -----------------------------
+            # ----------------------------
 
             if (
                 current_low < left_lows.min()
@@ -141,7 +129,7 @@ class SwingEngine:
         swings: pd.DataFrame,
     ) -> pd.DataFrame:
         """
-        HH HL LH LL Classification.
+        Classify swings into HH / HL / LH / LL.
         """
 
         last_high = None
