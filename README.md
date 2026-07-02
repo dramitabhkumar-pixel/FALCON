@@ -1,47 +1,32 @@
-<<<<<<< HEAD
-# 🦅 Project FALCON
+# Project FALCON
 
-**Financial AI Logic for Chart Observation & Navigation**
-
-FALCON is a professional trading decision engine designed to analyze financial markets using market structure, Fibonacci retracements, trend analysis, momentum indicators, and risk management.
-
-The goal of FALCON is not simply to generate buy or sell signals, but to explain **why** a trade qualifies and continuously monitor its health after entry.
-
----
-
-## Features (Planned)
-
-- Automatic Swing Detection
-- Market Structure Analysis
-- Break of Structure (BOS)
-- Change of Character (ChoCH)
-- Automatic Fibonacci
-- Trendline Detection
-- EMA, RSI, ATR and ADX Analysis
-- Confluence Scoring Engine
-- Position Sizing
-- ATR Based Stop Loss
-- Trade Health Monitoring
-- Backtesting
-- Zerodha Kite Integration
-- Paper Trading
-
----
+An institutional-grade algorithmic trading framework.
 
 ## Current Version
 
-Version: **0.1.0 Alpha**
+v0.2
 
-Status: **Under Development**
+## Completed
 
----
+- BaseEngine
+- SwingEngine
+- StructureEngine
+- Modular Models
+- Test Framework
 
-## Author
+## Next Milestone
 
-Project Owner: **Dr. Amitabh Kumar**
+- Trend State Machine
+- BOS Detection
+- CHoCH Detection
+- Fibonacci Engine
 
-Developed with assistance from ChatGPT.
-=======
-# FALCON
+## Planned Modules
+
+- Indicator Engine
+- Confluence Engine
+- Trade Engine
+- Risk Engine
+- Zerodha Integration
 FOR MY ALGO
 >>>>>>> 374fcca3a26a52ba93f91cf7e914f383f869ed6f
