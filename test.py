@@ -10,4 +10,4 @@ df = pd.DataFrame({
     "Close":[2,3,4,5,6,5,4,3,2,4,5]
 })
 
-print(engine.detect_swings(df))
+print(engine.run(df))

@@ -1,26 +1,55 @@
 """
 =========================================================
 Project FALCON
-Market Structure Engine
-Version : 1.0
+Structure Engine
+Version : 2.0
 =========================================================
 """
 
 import pandas as pd
 
+from core.base_engine import BaseEngine
 
-class StructureEngine:
+
+class StructureEngine(BaseEngine):
     """
     Detects market structure from classified swings.
     """
 
-    def detect_structure(
+    def __init__(self):
+
+        super().__init__("StructureEngine")
+
+    # -----------------------------------------------------
+
+    def validate(
+        self,
+        swings: pd.DataFrame,
+    ):
+
+        required = [
+            "Price",
+            "Type",
+            "Classification",
+        ]
+
+        for column in required:
+
+            if column not in swings.columns:
+                raise ValueError(
+                    f"Missing column: {column}"
+                )
+
+    # -----------------------------------------------------
+
+    def run(
         self,
         swings: pd.DataFrame,
     ) -> pd.DataFrame:
 
-        if swings.empty:
-            return swings
+        self.log("Running Structure Engine")
+
+        self.validate(swings)
 
         structure = []
 
@@ -29,29 +58,53 @@ class StructureEngine:
 
         for _, row in swings.iterrows():
 
-            if row["Classification"] in ["Swing High", "Higher High"]:
+            classification = row["Classification"]
 
-                if previous_high is not None:
+            # ----------------------------
+            # Bullish Structure
+            # ----------------------------
 
-                    if row["Price"] > previous_high:
+            if classification in (
+                "Swing High",
+                "Higher High",
+            ):
 
-                        structure.append({
-                            "Index": row["Index"],
-                            "Signal": "BOS Bullish"
-                        })
+                if (
+                    previous_high is not None
+                    and row["Price"] > previous_high
+                ):
+
+                    structure.append({
+
+                        "Index": row["Index"],
+                        "Signal": "Bullish BOS",
+                        "Price": row["Price"],
+
+                    })
 
                 previous_high = row["Price"]
 
-            elif row["Classification"] in ["Swing Low", "Lower Low"]:
+            # ----------------------------
+            # Bearish Structure
+            # ----------------------------
 
-                if previous_low is not None:
+            elif classification in (
+                "Swing Low",
+                "Lower Low",
+            ):
 
-                    if row["Price"] < previous_low:
+                if (
+                    previous_low is not None
+                    and row["Price"] < previous_low
+                ):
 
-                        structure.append({
-                            "Index": row["Index"],
-                            "Signal": "BOS Bearish"
-                        })
+                    structure.append({
+
+                        "Index": row["Index"],
+                        "Signal": "Bearish BOS",
+                        "Price": row["Price"],
+
+                    })
 
                 previous_low = row["Price"]
 
