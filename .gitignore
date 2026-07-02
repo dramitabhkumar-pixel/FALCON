@@ -1,27 +1,15 @@
-# Python
 __pycache__/
-*.py[cod]
+*.pyc
 *.pyo
+*.pyd
 
-# Virtual Environment
-.venv/
-venv/
-
-# VS Code
 .vscode/
 
-# Environment variables
 .env
 
-# Logs
-*.log
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Test cache
 .pytest_cache/
 
-# Python cache
-.mypy_cache/
+*.log
+
+.DS_Store
+Thumbs.db
