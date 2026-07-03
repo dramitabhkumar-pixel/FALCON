@@ -2,62 +2,174 @@
 =========================================================
 Project FALCON
 Master Market Context
+Version : 2.0
 =========================================================
 """
 
 from dataclasses import dataclass, field
-from typing import Any, List
+from typing import Any, List, Optional
+
+from models.enums import (
+    Trend,
+    Bias,
+    Strength,
+    StructureEvent,
+    Signal,
+)
 
 
-@dataclass
+# =========================================================
+# TREND STATE
+# =========================================================
+
+@dataclass(slots=True)
 class TrendState:
-    trend: str = "UNKNOWN"
-    strength: str = "UNKNOWN"
-    bias: str = "NEUTRAL"
+    """
+    Stores the current market trend.
+    """
+
+    trend: Trend = Trend.UNKNOWN
+
+    strength: Strength = Strength.NORMAL
+
+    bias: Bias = Bias.NEUTRAL
 
 
-@dataclass
+# =========================================================
+# STRUCTURE STATE
+# =========================================================
+
+@dataclass(slots=True)
 class StructureState:
+    """
+    Market Structure Information.
+    """
+
     bos: bool = False
+
     choch: bool = False
+
     liquidity_sweep: bool = False
 
+    last_event: StructureEvent = StructureEvent.NONE
 
-@dataclass
+
+# =========================================================
+# FIBONACCI STATE
+# =========================================================
+
+@dataclass(slots=True)
 class FibonacciState:
-    swing_high: float | None = None
-    swing_low: float | None = None
-    golden_zone_low: float | None = None
-    golden_zone_high: float | None = None
+    """
+    Fibonacci information.
+    """
+
+    swing_high: Optional[float] = None
+
+    swing_low: Optional[float] = None
+
+    golden_zone_low: Optional[float] = None
+
+    golden_zone_high: Optional[float] = None
+
+    premium: Optional[float] = None
+
+    equilibrium: Optional[float] = None
+
+    discount: Optional[float] = None
 
 
-@dataclass
+# =========================================================
+# INDICATOR STATE
+# =========================================================
+
+@dataclass(slots=True)
 class IndicatorState:
-    ema_fast: float | None = None
-    ema_slow: float | None = None
-    adx: float | None = None
-    atr: float | None = None
-    rsi: float | None = None
+    """
+    Indicator values.
+    """
+
+    ema_fast: Optional[float] = None
+
+    ema_slow: Optional[float] = None
+
+    adx: Optional[float] = None
+
+    atr: Optional[float] = None
+
+    rsi: Optional[float] = None
+
+    volume: Optional[float] = None
 
 
-@dataclass
+# =========================================================
+# CONFLUENCE STATE
+# =========================================================
+
+@dataclass(slots=True)
 class ConfluenceState:
+    """
+    Strategy confluence.
+    """
+
     score: int = 0
-    signal: str = "NO TRADE"
+
+    signal: Signal = Signal.NO_TRADE
+
+    confidence: float = 0.0
 
 
-@dataclass
+# =========================================================
+# TRADE STATE
+# =========================================================
+
+@dataclass(slots=True)
 class TradeState:
-    entry: float | None = None
-    stop_loss: float | None = None
-    target: float | None = None
+    """
+    Current trade setup.
+    """
+
+    entry: Optional[float] = None
+
+    stop_loss: Optional[float] = None
+
+    target: Optional[float] = None
+
+    risk_reward: Optional[float] = None
 
 
-@dataclass
+# =========================================================
+# MASTER MARKET CONTEXT
+# =========================================================
+
+@dataclass(slots=True)
 class MarketContext:
+    """
+    Shared object passed between every engine.
 
+    Swing Engine
+        ↓
+    Structure Engine
+        ↓
+    Trend Engine
+        ↓
+    Liquidity Engine
+        ↓
+    Fibonacci Engine
+        ↓
+    Indicator Engine
+        ↓
+    Confluence Engine
+        ↓
+    Entry Engine
+    """
+
+    # Raw Data
     swings: List[Any] = field(default_factory=list)
 
+    candles: List[Any] = field(default_factory=list)
+
+    # Engine States
     trend: TrendState = field(default_factory=TrendState)
 
     structure: StructureState = field(default_factory=StructureState)
