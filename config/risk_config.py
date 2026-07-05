@@ -1,0 +1,7 @@
+RISK_PER_TRADE = 0.01      # 1%
+
+MAX_DAILY_LOSS = 0.03      # 3%
+
+MAX_OPEN_TRADES = 3
+
+MIN_RISK_REWARD = 2.0

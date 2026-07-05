@@ -1,0 +1,5 @@
+PROJECT_NAME = "FALCON"
+
+VERSION = "2.0"
+
+DEBUG = True

@@ -1,2 +1,0 @@
-TradeID,Symbol,Side,Entry,Exit,Quantity,StopLoss,Target,PnL,Status
-1,BANKNIFTY,BUY,51000,51220,20,50950,51200,4400,EXITED
