@@ -1,67 +1,42 @@
-from engine.orderbook_engine import OrderBookEngine
 from engine.trade_manager import TradeManager
-from enums import OrderSide
 
+from core.order import Order
+from enums import OrderSide, OrderStatus
 
-ob = OrderBookEngine()
 
 tm = TradeManager()
 
-
-order = ob.create_order(
-
+order = Order(
+    order_id=1,
     symbol="BANKNIFTY",
-
     side=OrderSide.BUY,
-
     quantity=25,
-
-    entry=51000,
-
-    sl=50900,
-
-    target=51200
-
+    entry_price=50000,
+    stop_loss=49900,
+    target=50200,
 )
 
-ob.fill_order(order.order_id, 51000)
+order.status = OrderStatus.FILLED
+order.filled_price = 50000
 
+print("\n==============================")
+print("FALCON TRADE MANAGER TEST")
+print("==============================")
 
-print(
-
-    "SL Hit :",
-
-    tm.check_stop_loss(
-
-        order,
-
-        50890
-
-    )
-
-)
-
-
-print(
-
-    "Target Hit :",
-
-    tm.check_target(
-
-        order,
-
-        51220
-
-    )
-
-)
-
+print("Stop Loss :", tm.check_stop_loss(order, 49950))
+print("Target    :", tm.check_target(order, 50150))
 
 tm.move_to_breakeven(order)
-
 print("Breakeven SL :", order.stop_loss)
 
+tm.trail_stop_loss(order, 50050)
+print("Trailing SL  :", order.stop_loss)
 
-tm.trail_stop_loss(order, 51050)
+print("PnL :", tm.calculate_pnl(order, 50120))
 
-print("Trailing SL :", order.stop_loss)
+tm.process(order, 50220)
+
+print("Status :", order.status)
+print("Exit   :", order.exit_price)
+print("PnL    :", order.pnl)
+print("Remark :", order.remarks)
