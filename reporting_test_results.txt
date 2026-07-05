@@ -1,0 +1,5 @@
+Exit code: 1
+--- STDOUT ---
+
+--- STDERR ---
+c:\Users\pc\OneDrive\Documents\FALCON\.venv\Scripts\python.exe: No module named pytest.__main__; 'pytest' is a package and cannot be directly executed
