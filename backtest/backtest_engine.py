@@ -91,6 +91,17 @@ class BacktestEngine:
         print("=" * 50)
         return result
 
+    def run_full(self) -> tuple[dict, "pd.DataFrame"]:
+        """Run the backtest and return both metrics and the trade history dataframe.
+
+        This method is non-breaking: it delegates to :meth:`run` and then
+        exposes the internal trade history for reporting and analysis.
+        """
+
+        result = self.run()
+        history_df = self.trade_engine.history.to_dataframe()
+        return result, history_df
+
 
 def run_backtest(
     df: pd.DataFrame | None = None,

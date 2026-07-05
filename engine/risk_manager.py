@@ -90,12 +90,15 @@ class RiskManager(BaseEngine):
 
     ) -> bool:
 
+        # Check max open positions
         if open_positions >= MAX_OPEN_TRADES:
-
+            self.log(f"Cannot trade: open_positions({open_positions}) >= MAX_OPEN_TRADES({MAX_OPEN_TRADES})")
             return False
 
-        if self.daily_loss >= MAX_DAILY_LOSS * 500000:
-
+        # Check daily loss threshold (account size is assumed 500000)
+        threshold = MAX_DAILY_LOSS * 500_000
+        if self.daily_loss >= threshold:
+            self.log(f"Cannot trade: daily_loss({self.daily_loss}) >= MAX_DAILY_LOSS*account({threshold})")
             return False
 
         return True
