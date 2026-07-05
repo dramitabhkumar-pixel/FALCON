@@ -28,5 +28,23 @@ v0.2
 - Trade Engine
 - Risk Engine
 - Zerodha Integration
-FOR MY ALGO
->>>>>>> 374fcca3a26a52ba93f91cf7e914f383f869ed6f
+
+## Backtesting
+
+Run the BankNIFTY 15-minute backtest using a CSV file with columns: Date/Datetime, Open, High, Low, Close, Volume.
+
+```bash
+python -m backtest.runner -c "c:\\Users\\pc\\Downloads\\bank_nifty_15min.csv" -o journal -v
+```
+
+Generated reports will be written to `journal/`:
+
+- `journal/trades.csv`
+- `journal/equity.csv`
+- `journal/performance.csv`
+
+For synthetic data (no CSV):
+
+```bash
+python -m backtest.runner -o journal -v
+```
