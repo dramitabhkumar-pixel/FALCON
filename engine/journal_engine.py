@@ -9,16 +9,16 @@ class JournalEngine:
         self.file_path = file_path
 
         header = [
-            "TradeID",
-            "Symbol",
-            "Side",
-            "Entry",
-            "Exit",
-            "Quantity",
-            "StopLoss",
-            "Target",
-            "PnL",
-            "Status"
+            "order_id",
+            "symbol",
+            "side",
+            "entry_price",
+            "exit_price",
+            "quantity",
+            "stop_loss",
+            "target",
+            "pnl",
+            "status",
         ]
 
         write_header = (
@@ -68,7 +68,7 @@ class JournalEngine:
         total = 0.0
 
         for trade in trades:
-
-            total += float(trade["PnL"])
+            pnl_val = trade.get("pnl") or trade.get("PnL") or "0"
+            total += float(pnl_val)
 
         return total

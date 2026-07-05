@@ -7,14 +7,16 @@ Usage:
 - Synthetic data:
 
 ```
-python -m backtest.runner -o journal -v
+python -m backtest -o journal -v
 ```
 
 - From CSV:
 
 ```
-python -m backtest.runner -c path/to/ohlc.csv -o journal
+python -m backtest -c path/to/ohlc.csv -d 8 -o journal
 ```
+
+This command backtests only the last 8 calendar days of data from the CSV.
 
 Outputs written to `journal/` by default:
 

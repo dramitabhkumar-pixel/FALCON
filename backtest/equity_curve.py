@@ -40,7 +40,7 @@ def build_equity_curve(trades: pd.DataFrame, initial_capital: float = 500_000) -
     # Fill missing timestamps with monotonically increasing values to preserve order
     missing_mask = df["timestamp"].isna()
     if missing_mask.any():
-        filler = pd.date_range("1970-01-01", periods=missing_mask.sum(), freq="S")
+        filler = pd.date_range("1970-01-01", periods=missing_mask.sum(), freq="s")
         df.loc[missing_mask, "timestamp"] = filler
 
     df = df.sort_values("timestamp").reset_index(drop=True)

@@ -12,7 +12,7 @@ Author : Amitabh Kumar + ChatGPT
 
 from core.base_engine import BaseEngine
 from core.models import MarketContext
-from core.constants import (
+from config.indicator_config import (
     ADX_THRESHOLD,
     RSI_BUY_LEVEL,
     RSI_SELL_LEVEL,

@@ -66,11 +66,35 @@ def normalize_columns(df: pd.DataFrame) -> pd.DataFrame:
     return output
 
 
-def load_csv(path: str | Path) -> pd.DataFrame:
+def _filter_last_n_days(df: pd.DataFrame, days: int) -> pd.DataFrame:
+    if days <= 0:
+        raise ValueError("days must be a positive integer")
+
+    if df.index.empty:
+        return df
+
+    df = df.sort_index()
+    unique_dates = pd.Series(df.index.date).drop_duplicates().tolist()
+    if len(unique_dates) <= days:
+        return df
+
+    last_dates = unique_dates[-days:]
+    last_dates_set = {d.isoformat() for d in last_dates}
+    index_dates = pd.Index(df.index.date).astype(str)
+    mask = index_dates.isin(last_dates_set)
+    return df[mask]
+
+
+def load_csv(path: str | Path, last_days: int | None = None) -> pd.DataFrame:
     """Load OHLCV data from a CSV file."""
 
     df = pd.read_csv(path)
-    return normalize_columns(df)
+    normalized = normalize_columns(df)
+
+    if last_days is not None:
+        normalized = _filter_last_n_days(normalized, last_days)
+
+    return normalized
 
 
 def make_synthetic_ohlc(

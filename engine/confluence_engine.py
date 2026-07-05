@@ -2,8 +2,11 @@ from config.confluence_config import (
     CONFLUENCE_WEIGHTS,
     BUY_THRESHOLD,
     STRONG_BUY_THRESHOLD,
+    SELL_THRESHOLD,
+    STRONG_SELL_THRESHOLD,
     MIN_ADX,
     MIN_RSI_BULL,
+    MAX_RSI_BEAR,
 )
 
 from models.confluence_result import ConfluenceResult
@@ -26,113 +29,141 @@ class ConfluenceEngine:
         atr_high,
         fib_golden_zone,
     ):
-
-        score = 0
-        reasons = []
-
         # -----------------------------
-        # Market Structure
+        # Bullish Score
         # -----------------------------
+        bullish_score = 0
+        bull_reasons = []
+
         if market_structure == "BULLISH":
-            score += CONFLUENCE_WEIGHTS["market_structure"]
-            reasons.append("Bullish market structure")
+            bullish_score += CONFLUENCE_WEIGHTS["market_structure"]
+            bull_reasons.append("Bullish market structure")
 
-        # -----------------------------
-        # Market Context
-        # -----------------------------
         if market_context == "UPTREND":
-            score += CONFLUENCE_WEIGHTS["market_context"]
-            reasons.append("Uptrend confirmed")
+            bullish_score += CONFLUENCE_WEIGHTS["market_context"]
+            bull_reasons.append("Uptrend confirmed")
 
-        # -----------------------------
-        # Swing Structure
-        # -----------------------------
         if swing_direction == "HH_HL":
-            score += CONFLUENCE_WEIGHTS["swing"]
-            reasons.append("HH-HL swing sequence")
+            bullish_score += CONFLUENCE_WEIGHTS["swing"]
+            bull_reasons.append("HH-HL swing sequence")
 
-        # -----------------------------
-        # Liquidity
-        # -----------------------------
         if liquidity == "BUY_SIDE":
-            score += CONFLUENCE_WEIGHTS["liquidity"]
-            reasons.append("Buy-side liquidity")
+            bullish_score += CONFLUENCE_WEIGHTS["liquidity"]
+            bull_reasons.append("Buy-side liquidity")
 
-        # -----------------------------
-        # EMA Trend
-        # -----------------------------
         if ema_bullish:
-            score += CONFLUENCE_WEIGHTS["ema"]
-            reasons.append("EMA bullish crossover")
+            bullish_score += CONFLUENCE_WEIGHTS["ema"]
+            bull_reasons.append("EMA bullish crossover")
 
-        # -----------------------------
-        # ADX
-        # -----------------------------
         if adx >= MIN_ADX:
-            score += CONFLUENCE_WEIGHTS["adx"]
-            reasons.append(f"Strong Trend (ADX = {adx})")
+            bullish_score += CONFLUENCE_WEIGHTS["adx"]
+            bull_reasons.append(f"Strong Trend (ADX = {adx})")
 
-        # -----------------------------
-        # RSI
-        # -----------------------------
         if rsi >= MIN_RSI_BULL:
-            score += CONFLUENCE_WEIGHTS["rsi"]
-            reasons.append(f"Bullish RSI ({rsi})")
+            bullish_score += CONFLUENCE_WEIGHTS["rsi"]
+            bull_reasons.append(f"Bullish RSI ({rsi})")
 
-        # -----------------------------
-        # ATR
-        # -----------------------------
         if atr_high:
-            score += CONFLUENCE_WEIGHTS["atr"]
-            reasons.append("High Volatility")
+            bullish_score += CONFLUENCE_WEIGHTS["atr"]
+            bull_reasons.append("High Volatility")
+
+        if fib_golden_zone and market_context == "UPTREND":
+            bullish_score += CONFLUENCE_WEIGHTS["fibonacci"]
+            bull_reasons.append("Inside Fibonacci Golden Zone (Bullish)")
 
         # -----------------------------
-        # Fibonacci
+        # Bearish Score
         # -----------------------------
-        if fib_golden_zone:
-            score += CONFLUENCE_WEIGHTS["fibonacci"]
-            reasons.append("Inside Fibonacci Golden Zone")
+        bearish_score = 0
+        bear_reasons = []
+
+        if market_structure == "BEARISH":
+            bearish_score += CONFLUENCE_WEIGHTS["market_structure"]
+            bear_reasons.append("Bearish market structure")
+
+        if market_context == "DOWNTREND":
+            bearish_score += CONFLUENCE_WEIGHTS["market_context"]
+            bear_reasons.append("Downtrend confirmed")
+
+        if swing_direction == "LH_LL":
+            bearish_score += CONFLUENCE_WEIGHTS["swing"]
+            bear_reasons.append("LH-LL swing sequence")
+
+        if liquidity == "SELL_SIDE":
+            bearish_score += CONFLUENCE_WEIGHTS["liquidity"]
+            bear_reasons.append("Sell-side liquidity")
+
+        if not ema_bullish:
+            bearish_score += CONFLUENCE_WEIGHTS["ema"]
+            bear_reasons.append("EMA bearish crossover")
+
+        if adx >= MIN_ADX:
+            bearish_score += CONFLUENCE_WEIGHTS["adx"]
+            bear_reasons.append(f"Strong Trend (ADX = {adx})")
+
+        if rsi <= MAX_RSI_BEAR:
+            bearish_score += CONFLUENCE_WEIGHTS["rsi"]
+            bear_reasons.append(f"Bearish RSI ({rsi})")
+
+        if atr_high:
+            bearish_score += CONFLUENCE_WEIGHTS["atr"]
+            bear_reasons.append("High Volatility")
+
+        if fib_golden_zone and market_context == "DOWNTREND":
+            bearish_score += CONFLUENCE_WEIGHTS["fibonacci"]
+            bear_reasons.append("Inside Fibonacci Golden Zone (Bearish)")
 
         # -----------------------------
-        # Confidence
+        # Determine Direction
         # -----------------------------
-        confidence = round((score / 100) * 100)
+        if bullish_score >= bearish_score:
+            score = bullish_score
+            reasons = bull_reasons
+            confidence = round((bullish_score / 100) * 100)
 
-        # -----------------------------
-        # Trade Grade
-        # -----------------------------
-        if score >= 95:
-            trade_grade = "A+"
-        elif score >= 85:
-            trade_grade = "A"
-        elif score >= 70:
-            trade_grade = "B"
-        elif score >= 50:
-            trade_grade = "C"
+            if score >= STRONG_BUY_THRESHOLD:
+                signal = "STRONG BUY"
+            elif score >= BUY_THRESHOLD:
+                signal = "BUY"
+            elif score >= 50:
+                signal = "WATCH"
+            else:
+                signal = "NO TRADE"
+
+            trade_grade = self._get_grade(score)
         else:
-            trade_grade = "REJECT"
+            score = bearish_score
+            reasons = bear_reasons
+            confidence = round((bearish_score / 100) * 100)
 
-        # -----------------------------
-        # Signal
-        # -----------------------------
-        if score >= STRONG_BUY_THRESHOLD:
-            signal = "STRONG BUY"
+            if score >= STRONG_SELL_THRESHOLD:
+                signal = "STRONG SELL"
+            elif score >= SELL_THRESHOLD:
+                signal = "SELL"
+            elif score >= 50:
+                signal = "WATCH"
+            else:
+                signal = "NO TRADE"
 
-        elif score >= BUY_THRESHOLD:
-            signal = "BUY"
-
-        elif score >= 50:
-            signal = "WATCH"
-
-        else:
-            signal = "NO TRADE"
+            trade_grade = self._get_grade(score)
 
         return ConfluenceResult(
             score=score,
             signal=signal,
             confidence=f"{confidence}%",
             trade_grade=trade_grade,
-            bullish_score=score,
-            bearish_score=100 - score,
+            bullish_score=bullish_score,
+            bearish_score=bearish_score,
             reasons=reasons,
         )
+
+    def _get_grade(self, score: int) -> str:
+        if score >= 95:
+            return "A+"
+        elif score >= 85:
+            return "A"
+        elif score >= 70:
+            return "B"
+        elif score >= 50:
+            return "C"
+        return "REJECT"

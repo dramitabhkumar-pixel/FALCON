@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from config.risk_config import MIN_RISK_REWARD
-from core.constants import (
+from config.indicator_config import (
     ADX_PERIOD,
     ATR_PERIOD,
     EMA_FAST,
@@ -23,6 +23,7 @@ from engine.liquidity_engine import LiquidityEngine
 from engine.market_context_engine import MarketContextEngine
 from engine.market_structure_engine import MarketStructureEngine
 from engine.swing_engine_v3 import SwingEngine
+from engine.trend_engine import TrendEngine
 from enums import OrderSide
 from models.confluence_result import ConfluenceResult
 
@@ -53,6 +54,7 @@ class StrategyRunner:
         self.liquidity_engine = LiquidityEngine()
         self.fib_engine = FibonacciEngine()
         self.confluence_engine = ConfluenceEngine()
+        self.trend_engine = TrendEngine()
 
     def evaluate(self, df: pd.DataFrame) -> TradeSetup | None:
         if len(df) < max(EMA_SLOW, ADX_PERIOD, RSI_PERIOD, ATR_PERIOD) + 5:
@@ -79,15 +81,38 @@ class StrategyRunner:
             avg_atr=float(latest["avg_atr"]),
         )
 
-        liquidity = self.liquidity_engine.analyze(swings_dicts)
-        fib_golden_zone = self._in_golden_zone(df, context.trend, swings)
+        # Determine primary 15m trend using TrendEngine
+        trend_res = self.trend_engine.analyze(context, structure)
+        trend_15m = trend_res.trend
+        trade_dir = trend_res.trade_direction  # "LONG", "SHORT", or "NONE"
 
-        swing_direction = "HH_HL"
-        if not (
-            structure.last_high_type == "HH"
-            and structure.last_low_type == "HL"
-        ):
-            swing_direction = "OTHER"
+        if trade_dir == "NONE":
+            return None
+
+        # Multi-timeframe trend checks
+        df_1h = self._resample_to_htf(df, "1H")
+        df_1d = self._resample_to_htf(df, "1D")
+
+        # Fallback to trend_15m if we don't have enough data on HTFs yet
+        trend_1h = self._evaluate_timeframe_trend(df_1h) if len(df_1h) >= 2 else trend_15m
+        trend_1d = self._evaluate_timeframe_trend(df_1d) if len(df_1d) >= 2 else trend_15m
+
+        # Verify trend alignment across all three timeframes
+        if trade_dir == "LONG":
+            if not (trend_15m == "UPTREND" and trend_1h == "UPTREND" and trend_1d == "UPTREND"):
+                return None
+        elif trade_dir == "SHORT":
+            if not (trend_15m == "DOWNTREND" and trend_1h == "DOWNTREND" and trend_1d == "DOWNTREND"):
+                return None
+
+        liquidity = self.liquidity_engine.analyze(swings_dicts)
+        fib_golden_zone = self._in_golden_zone(df, trend_15m, swings)
+
+        swing_direction = "OTHER"
+        if structure.last_high_type == "HH" and structure.last_low_type == "HL":
+            swing_direction = "HH_HL"
+        elif structure.last_high_type == "LH" and structure.last_low_type == "LL":
+            swing_direction = "LH_LL"
 
         structure_bias = {
             "UPTREND": "BULLISH",
@@ -95,11 +120,11 @@ class StrategyRunner:
             "RANGE": "NEUTRAL",
         }.get(structure.trend, "NEUTRAL")
 
-        liquidity_side = (
-            "BUY_SIDE"
-            if liquidity.buy_side_liquidity
-            else "NONE"
-        )
+        liquidity_side = "NONE"
+        if liquidity.buy_side_liquidity:
+            liquidity_side = "BUY_SIDE"
+        elif liquidity.sell_side_liquidity:
+            liquidity_side = "SELL_SIDE"
 
         confluence = self.confluence_engine.evaluate(
             market_structure=structure_bias,
@@ -113,33 +138,152 @@ class StrategyRunner:
             fib_golden_zone=fib_golden_zone,
         )
 
-        if confluence.signal not in ("BUY", "STRONG BUY"):
-            return None
-
         entry = float(df.iloc[-1]["Close"])
-        stop_loss = self._build_stop_loss(structure, entry)
-        if stop_loss is None or stop_loss >= entry:
+
+        highs = swings[swings["Type"] == "HIGH"]
+        lows = swings[swings["Type"] == "LOW"]
+        if highs.empty or lows.empty:
+            return None
+        swing_high = float(highs.iloc[-1]["Price"])
+        swing_low = float(lows.iloc[-1]["Price"])
+
+        # Calculate Fibonacci Levels
+        try:
+            levels = self.fib_engine.calculate(swing_high, swing_low, trend_15m)
+        except Exception:
             return None
 
-        risk = entry - stop_loss
-        target = entry + risk * MIN_RISK_REWARD
+        # Build trade setup based on signal direction
+        if trade_dir == "LONG" and confluence.signal in ("BUY", "STRONG BUY"):
+            # Stop loss is the 78.6% retracement (which is 23.6% level from the low)
+            stop_loss = float(levels.fib_78_6)
+            if stop_loss >= entry or pd.isna(stop_loss):
+                stop_loss = structure.protected_low or swing_low
+                if stop_loss is None or stop_loss >= entry:
+                    return None
 
-        return TradeSetup(
-            side=OrderSide.BUY,
-            entry=round(entry, 2),
-            stop_loss=round(stop_loss, 2),
-            target=round(target, 2),
-            confluence=confluence,
-        )
+            risk = entry - stop_loss
+            target = max(swing_high, entry + risk * MIN_RISK_REWARD)
 
-    def _build_stop_loss(self, structure, entry: float) -> float | None:
-        if structure.protected_low is not None:
-            return float(structure.protected_low)
+            return TradeSetup(
+                side=OrderSide.BUY,
+                entry=round(entry, 2),
+                stop_loss=round(stop_loss, 2),
+                target=round(target, 2),
+                confluence=confluence,
+            )
 
-        if structure.protected_high is not None and entry < structure.protected_high:
-            return float(structure.protected_high)
+        elif trade_dir == "SHORT" and confluence.signal in ("SELL", "STRONG SELL"):
+            # Stop loss is the 78.6% retracement (which is 23.6% level from the high)
+            stop_loss = float(levels.fib_78_6)
+            if stop_loss <= entry or pd.isna(stop_loss):
+                stop_loss = structure.protected_high or swing_high
+                if stop_loss is None or stop_loss <= entry:
+                    return None
+
+            risk = stop_loss - entry
+            target = min(swing_low, entry - risk * MIN_RISK_REWARD)
+
+            return TradeSetup(
+                side=OrderSide.SELL,
+                entry=round(entry, 2),
+                stop_loss=round(stop_loss, 2),
+                target=round(target, 2),
+                confluence=confluence,
+            )
 
         return None
+
+    def _resample_to_htf(self, df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
+        T = df.index[-1]
+
+        if timeframe == "1H":
+            resampled = df.resample("60min", origin="start_day", offset="15min").agg({
+                "Open": "first",
+                "High": "max",
+                "Low": "min",
+                "Close": "last",
+                "Volume": "sum"
+            }).dropna()
+
+            completed = []
+            for idx, row in resampled.iterrows():
+                # A 1-Hour bar starting at idx closes at idx + 60min, except 15:15 which closes at 15:30.
+                if idx.time() == pd.Timestamp("15:15:00").time():
+                    close_time = idx.replace(hour=15, minute=30)
+                else:
+                    close_time = idx + pd.Timedelta(minutes=60)
+                if close_time <= T:
+                    completed.append(row)
+            return pd.DataFrame(completed) if completed else pd.DataFrame(columns=df.columns)
+
+        elif timeframe == "1D":
+            resampled = df.resample("1D").agg({
+                "Open": "first",
+                "High": "max",
+                "Low": "min",
+                "Close": "last",
+                "Volume": "sum"
+            }).dropna()
+
+            completed = []
+            for idx, row in resampled.iterrows():
+                # A daily bar closes at 15:30.
+                close_time = idx.replace(hour=15, minute=30)
+                if close_time <= T:
+                    completed.append(row)
+            return pd.DataFrame(completed) if completed else pd.DataFrame(columns=df.columns)
+
+        return df
+
+    def _evaluate_timeframe_trend(self, df_tf: pd.DataFrame) -> str:
+        """
+        Evaluate trend for a given timeframe dataframe.
+        Returns "UPTREND", "DOWNTREND", or "RANGE".
+        """
+        if len(df_tf) < 2:
+            return "RANGE"
+
+        # Compute indicators for this timeframe
+        indicators = self._compute_indicators(df_tf)
+        latest = indicators.iloc[-1]
+        prev = indicators.iloc[-2]
+
+        close = float(latest["Close"])
+        ema_fast = float(latest["ema_fast"])
+        ema_slow = float(latest["ema_slow"])
+        ema_slow_prev = float(prev["ema_slow"])
+        adx = float(latest["adx"])
+        rsi = float(latest["rsi"])
+        atr = float(latest["atr"])
+        atr_prev = float(prev["atr"])
+
+        # Bullish Check
+        bullish = (
+            ema_fast > ema_slow
+            and ema_slow > ema_slow_prev
+            and adx > 20
+            and rsi > 60
+            and atr > atr_prev
+            and close > ema_slow
+        )
+
+        # Bearish Check (opposite conditions)
+        bearish = (
+            ema_fast < ema_slow
+            and ema_slow < ema_slow_prev
+            and adx > 20
+            and rsi < 40
+            and atr > atr_prev
+            and close < ema_slow
+        )
+
+        if bullish:
+            return "UPTREND"
+        elif bearish:
+            return "DOWNTREND"
+        else:
+            return "RANGE"
 
     def _in_golden_zone(
         self,

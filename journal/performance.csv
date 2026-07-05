@@ -1,0 +1,2 @@
+total_trades,winning_trades,losing_trades,win_rate,total_pnl,avg_pnl,profit_factor,max_drawdown,return_pct,signals,entries,symbol,bars_processed
+1,0,1,0.0,-4563.45,-4563.45,0.0,0.0,-0.91,30,4,BANKNIFTY,150

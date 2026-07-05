@@ -22,6 +22,7 @@ logger = logging.getLogger("backtest.runner")
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run FALCON backtest runner")
     parser.add_argument("--csv", "-c", help="CSV input path", default=None)
+    parser.add_argument("--days", "-d", type=int, help="Backtest only the last N days from the CSV", default=None)
     parser.add_argument("--symbol", "-s", default="BANKNIFTY")
     parser.add_argument("--warmup", "-w", type=int, default=50)
     parser.add_argument("--initial-capital", "-i", type=float, default=500_000)
@@ -36,8 +37,10 @@ def main() -> None:
     )
 
     if args.csv:
-        df = load_csv(args.csv)
+        df = load_csv(args.csv, last_days=args.days)
     else:
+        if args.days is not None:
+            raise ValueError("--days may only be used with --csv")
         df = make_synthetic_ohlc()
 
     engine = BacktestEngine(df, symbol=args.symbol, warmup_bars=args.warmup, initial_capital=args.initial_capital)

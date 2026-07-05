@@ -16,7 +16,7 @@ class BacktestCandleFeed:
                 f"Need more bars than warmup ({warmup_bars}), got {len(df)}"
             )
 
-        self.df = df.reset_index(drop=True)
+        self.df = df.copy()
         self.warmup_bars = warmup_bars
         self._index = warmup_bars
 

@@ -7,6 +7,7 @@ Version : 1.0
 """
 
 from core.base_engine import BaseEngine
+from models.risk_result import RiskResult
 
 from config.risk_config import (
     RISK_PER_TRADE,
@@ -14,6 +15,7 @@ from config.risk_config import (
     MAX_OPEN_TRADES,
     MIN_RISK_REWARD,
 )
+
 
 
 class RiskManager(BaseEngine):
@@ -130,3 +132,49 @@ class RiskManager(BaseEngine):
         self.daily_loss = 0.0
 
         self.log("Risk Manager Reset")
+
+    # -----------------------------------------------------
+
+    def run(
+        self,
+        account_balance: float,
+        entry_price: float,
+        stop_loss: float,
+        target_price: float,
+        open_positions: int = 0,
+    ) -> RiskResult:
+        """
+        Runs risk checks and returns RiskResult.
+        """
+        can_tr = self.can_trade(open_positions)
+        valid_tr = self.validate_trade(entry_price, stop_loss, target_price)
+
+        approved = can_tr and valid_tr
+        qty = self.calculate_position_size(entry_price, stop_loss, account_balance)
+
+        risk_per_unit = abs(entry_price - stop_loss)
+        reward_per_unit = abs(target_price - entry_price)
+
+        risk_amount = qty * risk_per_unit
+        risk_percent = (risk_amount / account_balance * 100) if account_balance > 0 else 0.0
+        risk_reward = (reward_per_unit / risk_per_unit) if risk_per_unit > 0 else 0.0
+
+        if not can_tr:
+            message = f"Rejected: Limit hit (open_positions={open_positions}, daily_loss={self.daily_loss})"
+        elif not valid_tr:
+            message = f"Rejected: Invalid parameters or bad risk-reward (entry={entry_price}, sl={stop_loss}, target={target_price})"
+        else:
+            message = "Approved"
+
+        return RiskResult(
+            approved=approved,
+            account_balance=account_balance,
+            risk_percent=round(risk_percent, 2),
+            risk_amount=round(risk_amount, 2),
+            entry_price=entry_price,
+            stop_loss=stop_loss,
+            target_price=target_price,
+            quantity=qty,
+            risk_reward=round(risk_reward, 2),
+            message=message,
+        )
