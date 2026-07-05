@@ -1,28 +1,17 @@
 """
 ==========================================================
-FALCON CORE MODELS
+FALCON MODELS
+Version : 1.0
+
+Centralized dataclasses used across the entire FALCON
+trading system.
+
+Author : Amitabh Kumar + ChatGPT
 ==========================================================
 """
 
 from dataclasses import dataclass, field
 from typing import Optional, List
-
-
-# ==========================================================
-# CANDLE
-# ==========================================================
-
-@dataclass
-class Candle:
-
-    timestamp: str
-
-    open: float
-    high: float
-    low: float
-    close: float
-
-    volume: float
 
 
 # ==========================================================
@@ -33,11 +22,8 @@ class Candle:
 class Swing:
 
     index: int
-
     price: float
-
-    type: str
-
+    type: str          # HIGH / LOW
     timestamp: Optional[str] = None
 
 
@@ -49,13 +35,9 @@ class Swing:
 class MarketContext:
 
     trend: str
-
     bias: str
-
     strength: str
-
     volatility: str
-
     session: str
 
 
@@ -69,15 +51,12 @@ class MarketStructure:
     trend: str
 
     last_high_type: str
-
     last_low_type: str
 
     protected_high: Optional[float]
-
     protected_low: Optional[float]
 
     bos: bool
-
     choch: bool
 
 
@@ -89,25 +68,17 @@ class MarketStructure:
 class FibonacciLevels:
 
     high: float
-
     low: float
 
     fib_0: float
-
     fib_23_6: float
-
     fib_38_2: float
-
     fib_50: float
-
     fib_61_8: float
-
     fib_78_6: float
-
     fib_100: float
 
     golden_zone_top: float
-
     golden_zone_bottom: float
 
 
@@ -119,11 +90,9 @@ class FibonacciLevels:
 class TrendLine:
 
     slope: float
-
     intercept: float
 
     start_index: int
-
     end_index: int
 
     direction: str
@@ -151,11 +120,9 @@ class LiquidityZone:
 class OrderBlock:
 
     high: float
-
     low: float
 
     bullish: bool
-
     mitigated: bool = False
 
 
@@ -167,11 +134,9 @@ class OrderBlock:
 class FairValueGap:
 
     high: float
-
     low: float
 
     bullish: bool
-
     filled: bool = False
 
 
@@ -248,7 +213,7 @@ class ConfluenceScore:
 
 
 # ==========================================================
-# EXECUTION
+# EXECUTION RESULT
 # ==========================================================
 
 @dataclass
@@ -260,36 +225,38 @@ class ExecutionResult:
 
     message: str
 
- # ==========================================================
-# TREND RESULT
+
+# ==========================================================
+# CANDLE
 # ==========================================================
 
 @dataclass
-class TrendResult:
+class Candle:
 
-    trend: str
+    timestamp: str
 
-    strength: str
+    open: float
 
-    confidence: float
+    high: float
 
-    trade_direction: str
+    low: float
 
-    pullback_allowed: bool
+    close: float
+
+    volume: float
+
 
 # ==========================================================
-# LIQUIDITY RESULT
+# MARKET SESSION
 # ==========================================================
 
 @dataclass
-class LiquidityResult:
+class SessionInfo:
 
-    buy_side_liquidity: list
+    name: str
 
-    sell_side_liquidity: list
+    start_time: str
 
-    equal_highs: list
+    end_time: str
 
-    equal_lows: list
-
-    liquidity_sweeps: list
+    active: bool

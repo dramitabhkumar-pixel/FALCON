@@ -1,77 +1,97 @@
 """
-=========================================================
-Project FALCON
-Market Context Engine
+==========================================================
+FALCON MARKET CONTEXT ENGINE
 Version : 2.0
-=========================================================
+
+Determines overall market context from technical
+indicators.
+
+Author : Amitabh Kumar + ChatGPT
+==========================================================
 """
 
-import pandas as pd
-
 from core.base_engine import BaseEngine
-from models.market_context import MarketContext
+from core.models import MarketContext
+from core.constants import (
+    ADX_THRESHOLD,
+    RSI_BUY_LEVEL,
+    RSI_SELL_LEVEL,
+)
 
 
 class MarketContextEngine(BaseEngine):
 
     def __init__(self):
+        super().__init__()
 
-        super().__init__("MarketContext")
+    def analyze(
+        self,
+        adx: float,
+        ema_fast: float,
+        ema_slow: float,
+        rsi: float,
+        atr: float,
+        avg_atr: float,
+    ) -> MarketContext:
 
-    # -------------------------------------------------
+        self.log("Running Market Context Engine")
 
-    def validate(self, context: MarketContext):
+        # -----------------------------------------
+        # Trend
+        # -----------------------------------------
 
-        if context is None:
-            raise ValueError("MarketContext cannot be None.")
+        if ema_fast > ema_slow:
+            trend = "UPTREND"
 
-    # -------------------------------------------------
+        elif ema_fast < ema_slow:
+            trend = "DOWNTREND"
 
-    def run(self, context: MarketContext) -> MarketContext:
+        else:
+            trend = "RANGE"
 
-        self.log("Updating Market Context")
+        # -----------------------------------------
+        # Strength
+        # -----------------------------------------
 
-        self.validate(context)
+        if adx >= ADX_THRESHOLD:
+            strength = "STRONG"
 
-        swings = context.swings
+        else:
+            strength = "WEAK"
 
-        if len(swings) == 0:
-            return context
+        # -----------------------------------------
+        # Volatility
+        # -----------------------------------------
 
-        context.trend.trend = "RANGE"
-        context.trend.bias = "NEUTRAL"
-        context.trend.strength = "NORMAL"
+        if atr >= avg_atr:
+            volatility = "HIGH"
 
-        higher_high = False
-        higher_low = False
+        else:
+            volatility = "NORMAL"
 
-        lower_high = False
-        lower_low = False
+        # -----------------------------------------
+        # Bias
+        # -----------------------------------------
 
-        for _, row in swings.iterrows():
+        if trend == "UPTREND" and rsi >= RSI_BUY_LEVEL:
+            bias = "BULLISH"
 
-            classification = row["Classification"]
+        elif trend == "DOWNTREND" and rsi <= RSI_SELL_LEVEL:
+            bias = "BEARISH"
 
-            if classification == "Higher High":
-                higher_high = True
+        else:
+            bias = "NEUTRAL"
 
-            elif classification == "Higher Low":
-                higher_low = True
+        # -----------------------------------------
+        # Session
+        # -----------------------------------------
 
-            elif classification == "Lower High":
-                lower_high = True
+        session = "REGULAR"
 
-            elif classification == "Lower Low":
-                lower_low = True
-
-        if higher_high and higher_low:
-
-            context.trend.trend = "UPTREND"
-            context.trend.bias = "BULLISH"
-
-        elif lower_high and lower_low:
-
-            context.trend.trend = "DOWNTREND"
-            context.trend.bias = "BEARISH"
-
-        return context
+        return MarketContext(
+            trend=trend,
+            bias=bias,
+            strength=strength,
+            volatility=volatility,
+            session=session,
+        )

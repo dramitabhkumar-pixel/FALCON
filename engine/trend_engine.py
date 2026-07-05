@@ -1,80 +1,94 @@
 """
-=========================================================
-Project FALCON
-Trend Engine
+==========================================================
+FALCON TREND ENGINE
 Version : 1.0
-=========================================================
+
+Combines Market Context + Market Structure
+to produce the final trend assessment.
+
+Author : Amitabh Kumar + ChatGPT
+==========================================================
 """
 
-import pandas as pd
-
 from core.base_engine import BaseEngine
+from core.models import (
+    MarketContext,
+    MarketStructure,
+    TrendResult,
+)
 
 
 class TrendEngine(BaseEngine):
-    """
-    Determines overall market trend from classified swings.
-    """
 
     def __init__(self):
+        super().__init__()
 
-        super().__init__("TrendEngine")
-
-    # -----------------------------------------------------
-
-    def validate(self, swings: pd.DataFrame):
-
-        required = [
-            "Classification"
-        ]
-
-        for column in required:
-
-            if column not in swings.columns:
-                raise ValueError(
-                    f"Missing column: {column}"
-                )
-
-    # -----------------------------------------------------
-
-    def run(self, swings: pd.DataFrame) -> str:
+    def analyze(
+        self,
+        context: MarketContext,
+        structure: MarketStructure,
+    ) -> TrendResult:
 
         self.log("Running Trend Engine")
 
-        self.validate(swings)
+        confidence = 50.0
 
-        if swings.empty:
-            return "UNKNOWN"
+        # -------------------------------------------------
+        # Trend Agreement
+        # -------------------------------------------------
 
-        highs = []
-        lows = []
+        if context.trend == structure.trend:
 
-        for _, row in swings.iterrows():
+            trend = context.trend
 
-            classification = row["Classification"]
+            confidence += 30
 
-            if classification in (
-                "Swing High",
-                "Higher High",
-                "Lower High",
-            ):
-                highs.append(classification)
+        else:
 
-            elif classification in (
-                "Swing Low",
-                "Higher Low",
-                "Lower Low",
-            ):
-                lows.append(classification)
+            trend = "RANGE"
 
-        # -----------------------------
-        # Simple Trend Logic (v1)
-        # -----------------------------
+            confidence -= 20
 
-        if "Higher High" in highs and "Higher Low" in lows:
-            return "UPTREND"
+        # -------------------------------------------------
+        # Strength
+        # -------------------------------------------------
 
-        if "Lower High" in highs and "Lower Low" in lows:
-            return "DOWNTREND"
+        strength = context.strength
 
-        return "RANGE"
+        if structure.bos:
+            confidence += 10
+
+        if structure.choch:
+            confidence -= 15
+
+        confidence = max(0, min(confidence, 100))
+
+        # -------------------------------------------------
+        # Trade Direction
+        # -------------------------------------------------
+
+        if trend == "UPTREND":
+            trade_direction = "LONG"
+
+        elif trend == "DOWNTREND":
+            trade_direction = "SHORT"
+
+        else:
+            trade_direction = "NONE"
+
+        # -------------------------------------------------
+        # Pullback Permission
+        # -------------------------------------------------
+
+        pullback_allowed = (
+            trade_direction != "NONE"
+            and confidence >= 70
+        )
+
+        return TrendResult(
+            trend=trend,
+            strength=strength,
+            confidence=confidence,
+            trade_direction=trade_direction,
+            pullback_allowed=pullback_allowed,
+        )

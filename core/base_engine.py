@@ -1,44 +1,28 @@
 """
-=========================================================
-Project FALCON
-Base Engine
-Version : 1.0
-=========================================================
+==========================================================
+FALCON BASE ENGINE
+==========================================================
 """
 
-from abc import ABC, abstractmethod
+from abc import ABC
+
+from core.logger import FalconLogger
 
 
 class BaseEngine(ABC):
-    """
-    Base class for all FALCON engines.
 
-    Every engine should inherit from this class.
-    """
+    def __init__(self):
 
-    def __init__(self, name: str):
+        self.logger = FalconLogger.get_logger()
 
-        self.name = name
+    def log(self, message):
 
-    def log(self, message: str) -> None:
-        """
-        Simple logger.
-        """
+        self.logger.info(message)
 
-        print(f"[{self.name}] {message}")
-
-    @abstractmethod
-    def validate(self, data):
-        """
-        Validate input data.
-        """
+    def reset(self):
 
         pass
 
-    @abstractmethod
-    def run(self, data):
-        """
-        Execute engine.
-        """
+    def validate(self):
 
-        pass
+        return True
