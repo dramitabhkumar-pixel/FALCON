@@ -1,42 +1,74 @@
-from engine.trade_manager import TradeManager
+from models.trade_decision import TradeDecision
 
-from core.order import Order
-from enums import OrderSide, OrderStatus
+from strategy.trade_manager import TradeManager
 
 
-tm = TradeManager()
+trade = TradeDecision(
 
-order = Order(
-    order_id=1,
-    symbol="BANKNIFTY",
-    side=OrderSide.BUY,
-    quantity=25,
-    entry_price=50000,
-    stop_loss=49900,
-    target=50200,
+    valid=True,
+
+    signal="BUY",
+
+    entry_price=100,
+
+    stop_loss=95,
+
+    target_price=115,
+
 )
 
-order.status = OrderStatus.FILLED
-order.filled_price = 50000
+manager = TradeManager()
 
-print("\n==============================")
-print("FALCON TRADE MANAGER TEST")
-print("==============================")
+print("\nInitial")
 
-print("Stop Loss :", tm.check_stop_loss(order, 49950))
-print("Target    :", tm.check_target(order, 50150))
+print(manager.summary())
 
-tm.move_to_breakeven(order)
-print("Breakeven SL :", order.stop_loss)
+manager.load_trade(trade)
 
-tm.trail_stop_loss(order, 50050)
-print("Trailing SL  :", order.stop_loss)
+print("\nLoaded")
 
-print("PnL :", tm.calculate_pnl(order, 50120))
+print(manager.summary())
 
-tm.process(order, 50220)
+manager.open_trade()
 
-print("Status :", order.status)
-print("Exit   :", order.exit_price)
-print("PnL    :", order.pnl)
-print("Remark :", order.remarks)
+manager.update_price(104)
+
+print("\nPrice = 104")
+
+print(manager.summary())
+
+manager.move_to_breakeven()
+
+print("\nBreakeven")
+
+print(manager.summary())
+
+manager.trail_stop(103)
+
+print("\nTrailing")
+
+print(manager.summary())
+
+manager.update_price(110)
+
+print("\nPrice = 110")
+
+print(manager.summary())
+
+manager.partial_exit()
+
+print("\nPartial Exit")
+
+print(manager.summary())
+
+manager.target_hit()
+
+print("\nTarget Hit")
+
+print(manager.summary())
+
+manager.close_trade()
+
+print("\nClosed")
+
+print(manager.summary())
