@@ -103,55 +103,73 @@ class ConfidenceEngine:
 
             (
                 "trend",
-                getattr(setup, "trend", None) in ("UP", "DOWN"),
+                getattr(setup, "trend", "").upper() in (
+                    "UP",
+                    "DOWN",
+                    "UPTREND",
+                    "DOWNTREND",
+                ),
                 "Trend Confirmed",
             ),
 
             (
                 "structure",
-                getattr(setup, "structure", None) in ("BULLISH", "BEARISH"),
+                getattr(setup, "structure", "").upper() in (
+                    "BULLISH",
+                    "BEARISH",
+                ),
                 "Market Structure",
             ),
 
             (
                 "ema_alignment",
-                getattr(setup, "ema_alignment", False),
+                bool(getattr(setup, "ema_alignment", False)),
                 "EMA Alignment",
             ),
 
             (
                 "bos",
-                getattr(setup, "bos", False),
+                bool(getattr(setup, "bos", False)),
                 "Break of Structure",
             ),
 
             (
                 "choch",
-                getattr(setup, "choch", False),
+                bool(getattr(setup, "choch", False)),
                 "CHOCH",
             ),
 
             (
                 "golden_zone",
-                getattr(setup, "golden_zone", False),
+                bool(getattr(setup, "golden_zone", False)),
                 "Golden Zone",
             ),
 
             (
                 "adx",
-                getattr(setup, "adx_confirmed", False),
+                float(getattr(setup, "adx", 0.0)) >= 20,
                 "ADX Strength",
             ),
 
             (
                 "rsi",
-                getattr(setup, "rsi_confirmed", False),
+                (
+                    (
+                        getattr(setup, "direction", "") == "BUY"
+                        and float(getattr(setup, "rsi", 0.0)) >= 60
+                    )
+                    or
+                    (
+                        getattr(setup, "direction", "") == "SELL"
+                        and float(getattr(setup, "rsi", 100.0)) <= 40
+                    )
+                ),
                 "RSI Confirmation",
             ),
 
             (
                 "liquidity",
-                getattr(setup, "liquidity_confirmed", False),
+                bool(getattr(setup, "liquidity", False)),
                 "Liquidity",
             ),
         ]

@@ -24,7 +24,7 @@ class SignalEngine:
 
         # BUY
         if (
-            setup.trend == "UP"
+            setup.trend in ("UP", "UPTREND")
             and setup.structure == "BULLISH"
             and setup.ema_alignment
             and setup.bos
@@ -45,7 +45,7 @@ class SignalEngine:
 
         # SELL
         if (
-            setup.trend == "DOWN"
+            setup.trend in ("DOWN", "DOWNTREND")
             and setup.structure == "BEARISH"
             and setup.ema_alignment
             and setup.choch
