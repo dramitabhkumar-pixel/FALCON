@@ -293,3 +293,24 @@ class LiquidityResult:
     equal_lows: list
 
     liquidity_sweeps: list
+
+# ==========================================================
+# INDICATOR RESULT
+# ==========================================================
+
+@dataclass
+class IndicatorResult:
+
+    ema_fast: float
+
+    ema_slow: float
+
+    rsi: float
+
+    adx: float
+
+    atr: float
+
+    avg_atr: float
+
+    volume: float
