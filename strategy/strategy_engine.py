@@ -42,6 +42,14 @@ class StrategyEngine:
         # -------------------------------------------------
 
         signal = self.signal_engine.generate(setup)
+        print("\n===== SIGNAL DEBUG =====")
+        print("Trend        :", setup.trend)
+        print("Structure    :", setup.structure)
+        print("EMA Align    :", setup.ema_alignment)
+        print("BOS          :", setup.bos)
+        print("CHOCH        :", setup.choch)
+        print("Golden Zone  :", setup.golden_zone)
+        print("========================")
 
         setup.direction = signal.signal
 

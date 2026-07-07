@@ -285,6 +285,7 @@ class IndicatorEngine(BaseEngine):
         self._validate_dataframe(df)
 
         df = df.copy()
+        df.columns = [c.lower() for c in df.columns]
 
         # -------------------------------------------------
         # EMA

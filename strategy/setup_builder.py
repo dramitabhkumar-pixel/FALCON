@@ -11,6 +11,8 @@ Author : Amitabh Kumar + ChatGPT
 =========================================================
 """
 
+from turtle import setup
+
 from models.trade_setup import TradeSetup
 
 from engine.market_context_engine import MarketContextEngine
@@ -101,7 +103,31 @@ class SetupBuilder:
 
         setup.fibonacci = True
 
-                # -------------------------------------------------
+# -----------------------------------------
+# Golden Zone Detection
+# -----------------------------------------
+
+        if market_context.trend == "UPTREND":
+
+         setup.golden_zone = (
+        fibonacci.golden_zone_bottom
+        <= close
+        <= fibonacci.golden_zone_top
+    )
+
+        elif market_context.trend == "DOWNTREND":
+
+            setup.golden_zone = (
+        fibonacci.golden_zone_top
+        <= close
+        <= fibonacci.golden_zone_bottom
+    )
+
+        else:
+
+            setup.golden_zone = False
+
+        # -------------------------------------------------
         # Structure Engine
         # -------------------------------------------------
 
