@@ -3,83 +3,103 @@
 PROJECT FALCON
 Trade Filters V2
 =========================================================
+
+Applies rule-based filters before a trade is allowed.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from models.trade_setup import TradeSetup
-from strategy.strategy_config import (
-    ADX_MIN,
-    RSI_LONG,
-    RSI_SHORT,
-)
+from strategy.strategy_config import StrategyConfig
 
 
-@dataclass
+@dataclass(slots=True)
 class FilterResult:
     passed: bool
-    reasons: list[str]
+    reasons: list[str] = field(default_factory=list)
 
 
 class TradeFilter:
+    """
+    Applies hard filters to a TradeSetup before it can
+    proceed to entry execution.
+    """
+
+    def __init__(self, config: StrategyConfig | None = None) -> None:
+        self.config = config or StrategyConfig()
+
+    # ---------------------------------------------------------
 
     def evaluate(self, setup: TradeSetup) -> FilterResult:
 
-        reasons = []
+        reasons: list[str] = []
 
-        # ----------------------------------------
+        adx = getattr(setup, "adx", 0.0)
+        rsi = getattr(setup, "rsi", 50.0)
+
+        # -----------------------------------------------------
         # ADX
-        # ----------------------------------------
-        if setup.adx < ADX_MIN:
-            reasons.append(f"ADX too low ({setup.adx})")
+        # -----------------------------------------------------
 
-        # ----------------------------------------
+        if adx < self.config.ADX_MIN:
+            reasons.append(f"ADX too low ({adx:.2f})")
+
+        # -----------------------------------------------------
         # RSI
-        # ----------------------------------------
-        if setup.direction == "BUY":
+        # -----------------------------------------------------
 
-            if setup.rsi < RSI_LONG:
-                reasons.append(f"RSI too weak ({setup.rsi})")
+        direction = getattr(setup, "direction", None)
 
-        elif setup.direction == "SELL":
+        if direction == "BUY":
 
-            if setup.rsi > RSI_SHORT:
-                reasons.append(f"RSI too strong ({setup.rsi})")
+            if rsi < self.config.RSI_LONG:
+                reasons.append(f"RSI too weak ({rsi:.2f})")
 
-        # ----------------------------------------
+        elif direction == "SELL":
+
+            if rsi > self.config.RSI_SHORT:
+                reasons.append(f"RSI too strong ({rsi:.2f})")
+
+        # -----------------------------------------------------
         # Trend
-        # ----------------------------------------
-        if setup.trend == "RANGE":
+        # -----------------------------------------------------
+
+        if getattr(setup, "trend", None) == "RANGE":
             reasons.append("Market is ranging")
 
-        # ----------------------------------------
+        # -----------------------------------------------------
         # Structure
-        # ----------------------------------------
-        if setup.structure == "NEUTRAL":
+        # -----------------------------------------------------
+
+        if getattr(setup, "structure", None) == "NEUTRAL":
             reasons.append("No market structure")
 
-        # ----------------------------------------
+        # -----------------------------------------------------
         # Liquidity
-        # ----------------------------------------
-        if not setup.liquidity:
+        # -----------------------------------------------------
+
+        if not getattr(setup, "liquidity", False):
             reasons.append("Liquidity confirmation missing")
 
-        # ----------------------------------------
+        # -----------------------------------------------------
         # Fibonacci
-        # ----------------------------------------
-        if not setup.golden_zone:
+        # -----------------------------------------------------
+
+        if not getattr(setup, "golden_zone", False):
             reasons.append("Outside Fibonacci Golden Zone")
 
-        # ----------------------------------------
+        # -----------------------------------------------------
         # EMA Alignment
-        # ----------------------------------------
-        if not setup.ema_alignment:
+        # -----------------------------------------------------
+
+        if not getattr(setup, "ema_alignment", False):
             reasons.append("EMA alignment missing")
 
-        # ----------------------------------------
+        # -----------------------------------------------------
         # Final Result
-        # ----------------------------------------
+        # -----------------------------------------------------
+
         return FilterResult(
-            passed=len(reasons) == 0,
+            passed=not reasons,
             reasons=reasons,
         )

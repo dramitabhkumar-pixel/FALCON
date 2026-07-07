@@ -27,11 +27,15 @@ class StrategyEngine:
 
     # =====================================================
 
-    def process(self, setup: TradeSetup):
+    def process(self, setup: TradeSetup) -> TradeDecision | None:
 
         print("\n==============================")
         print("PROJECT FALCON STRATEGY ENGINE")
         print("==============================")
+
+        if setup is None:
+            print("❌ Trade setup missing.")
+            return None
 
         # -------------------------------------------------
         # SIGNAL ENGINE
@@ -80,16 +84,15 @@ class StrategyEngine:
         setup.confidence = confidence.score
 
         print("\nConfidence")
+        print(f"Score       : {confidence.score:.2f}")
+        print(f"Grade       : {confidence.grade}")
+        print(f"Confidence  : {confidence.confidence}")
+        print(f"Qualified   : {'YES' if confidence.passed else 'NO'}")
 
-        print(f"Score : {confidence.score}")
-
-        print(f"Grade : {confidence.verdict}")
-
-        print("\nBreakdown")
-
-        for key, value in confidence.breakdown.items():
-
-            print(f"{key:20} {value}")
+        if confidence.reasons:
+            print("\nConfidence Reasons")
+            for reason in confidence.reasons:
+                print(f"  ✓ {reason}")
 
         # -------------------------------------------------
         # ENTRY ENGINE
@@ -100,19 +103,13 @@ class StrategyEngine:
         print("\nEntry Engine")
 
         if decision.valid:
-
             print("Trade Accepted")
-
         else:
-
             print("Trade Rejected")
 
         if decision.reasons:
-
             print("\nReasons")
-
             for reason in decision.reasons:
-
                 print(f"  • {reason}")
 
         return decision
