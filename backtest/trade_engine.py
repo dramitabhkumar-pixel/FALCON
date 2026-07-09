@@ -12,17 +12,28 @@ from backtest.trade_history import TradeHistory
 
 
 class BacktestTradeEngine:
-    """Paper execution wrapper with intrabar stop/target checks."""
+    """
+    Paper execution wrapper with intrabar stop/target checks.
+    """
 
     def __init__(self, symbol: str = "BANKNIFTY"):
+
         self.symbol = symbol
+
         self.execution = ExecutionEngine()
+
         self.history = TradeHistory()
+
         self.open_orders: list = []
 
     @property
     def open_position_count(self) -> int:
+
         return len(self.open_orders)
+
+    # =====================================================
+    # Entry
+    # =====================================================
 
     def try_entry(
         self,
@@ -30,7 +41,9 @@ class BacktestTradeEngine:
         entry: float,
         stop_loss: float,
         target: float,
+        entry_time,
     ):
+
         order = self.execution.execute_trade(
             symbol=self.symbol,
             side=side,
@@ -41,38 +54,76 @@ class BacktestTradeEngine:
         )
 
         if order is not None:
+
+            # Preserve original entry timestamp
+            order.entry_time = entry_time
+
             self.open_orders.append(order)
 
         return order
 
-    def on_bar(self, bar, entry_time=None) -> list:
-        """Check open orders against the current bar high/low."""
+    # =====================================================
+    # Candle Processing
+    # =====================================================
 
-        closed = []
+    def on_bar(self, bar) -> list:
+        """
+        Check all open orders against the latest candle.
+        """
+
+        closed_orders = []
 
         for order in list(self.open_orders):
+
             if order.status != OrderStatus.FILLED:
                 continue
 
             exit_price = self._resolve_exit(order, bar)
+
             if exit_price is None:
                 continue
 
-            self.execution.orderbook.exit_order(order.order_id, exit_price)
-            self.history.record(order, entry_time=entry_time, exit_time=bar.name)
+            self.execution.orderbook.exit_order(
+                order.order_id,
+                exit_price,
+            )
+
+            self.history.record(
+                order,
+                entry_time=order.entry_time,
+                exit_time=bar.name,
+            )
+
             self.open_orders.remove(order)
-            closed.append(order)
 
-        return closed
+            closed_orders.append(order)
 
-    def _resolve_exit(self, order, bar) -> float | None:
+        return closed_orders
+
+    # =====================================================
+    # Exit Resolution
+    # =====================================================
+
+    def _resolve_exit(
+        self,
+        order,
+        bar,
+    ) -> float | None:
+
         high = float(bar["High"])
         low = float(bar["Low"])
 
-        if order.side.name == "BUY":
+        # -------------------------------
+        # BUY Position
+        # -------------------------------
+
+        if order.side == OrderSide.BUY:
+
             stop_hit = low <= order.stop_loss
             target_hit = high >= order.target
 
+            # Conservative assumption:
+            # Stop Loss is hit first if both occur
             if stop_hit and target_hit:
                 return order.stop_loss
 
@@ -83,6 +134,10 @@ class BacktestTradeEngine:
                 return order.target
 
             return None
+
+        # -------------------------------
+        # SELL Position
+        # -------------------------------
 
         stop_hit = high >= order.stop_loss
         target_hit = low <= order.target
@@ -98,7 +153,14 @@ class BacktestTradeEngine:
 
         return None
 
+    # =====================================================
+    # Reset
+    # =====================================================
+
     def reset(self):
+
         self.execution = ExecutionEngine()
+
         self.history = TradeHistory()
+
         self.open_orders = []

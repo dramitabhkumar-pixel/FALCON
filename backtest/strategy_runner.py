@@ -5,8 +5,6 @@ Strategy Runner
 
 Backtest Integration Layer
 
-Bridges
-
 Historical Replay
         ↓
 Indicator Engine
@@ -19,7 +17,7 @@ Setup Builder
         ↓
 Strategy Engine
         ↓
-Trade Decision
+RunnerDecision
 =========================================================
 """
 
@@ -41,10 +39,14 @@ from strategy.setup_builder import SetupBuilder
 from strategy.strategy_engine import StrategyEngine
 
 
+# ==========================================================
+# Runner Decision
+# ==========================================================
+
 @dataclass
 class RunnerDecision:
     """
-    Adapter returned to BacktestEngine.
+    Returned to BacktestEngine.
     """
 
     side: OrderSide
@@ -58,16 +60,28 @@ class RunnerDecision:
     confidence: float = 0.0
 
 
+# ==========================================================
+# Strategy Runner
+# ==========================================================
+
 class StrategyRunner:
 
     """
-    Integrates all strategy components.
+    Integrates every strategy component.
 
-    evaluate(window)
-
-        ↓
-
-    RunnerDecision | None
+    Historical Window
+            ↓
+    Indicator Engine
+            ↓
+    Swing Engine
+            ↓
+    Liquidity Engine
+            ↓
+    Setup Builder
+            ↓
+    Strategy Engine
+            ↓
+    RunnerDecision
     """
 
     def __init__(
@@ -87,9 +101,9 @@ class StrategyRunner:
 
         self.strategy = StrategyEngine()
 
-    # ======================================================
+    # =====================================================
     # Helpers
-    # ======================================================
+    # =====================================================
 
     @staticmethod
     def _prepare_dataframe(
@@ -97,13 +111,13 @@ class StrategyRunner:
     ) -> pd.DataFrame:
 
         """
-        IndicatorEngine expects lowercase columns.
+        IndicatorEngine expects lowercase OHLC columns.
         """
 
         working = df.copy()
 
         working.columns = [
-            c.lower()
+            str(c).lower()
             for c in working.columns
         ]
 
@@ -115,8 +129,8 @@ class StrategyRunner:
     ) -> list[dict]:
 
         """
-        Convert SwingEngine dataframe
-        into LiquidityEngine format.
+        Convert Swing dataframe into
+        LiquidityEngine input.
         """
 
         if swings_df is None:
@@ -146,15 +160,16 @@ class StrategyRunner:
             )
 
         return swings
-    # ======================================================
+
+    # =====================================================
     # Main Evaluation
-    # ======================================================
+    # =====================================================
 
     def evaluate(
         self,
         window: pd.DataFrame,
     ) -> RunnerDecision | None:
-
+        
         if window is None or window.empty:
             return None
 
@@ -167,7 +182,7 @@ class StrategyRunner:
             working = self._prepare_dataframe(window)
 
             # ------------------------------------------
-            # Indicators
+            # Indicator Engine
             # ------------------------------------------
 
             indicators = self.indicators.analyze(
@@ -175,7 +190,8 @@ class StrategyRunner:
             )
 
             # ------------------------------------------
-            # Swing Detection
+            # Swing Engine
+            # (Used only for Liquidity Engine)
             # ------------------------------------------
 
             swings_df = self.swing_engine.run(
@@ -187,7 +203,7 @@ class StrategyRunner:
             )
 
             # ------------------------------------------
-            # Liquidity
+            # Liquidity Engine
             # ------------------------------------------
 
             liquidity_result = self.liquidity_engine.analyze(
@@ -195,12 +211,15 @@ class StrategyRunner:
             )
 
             if liquidity_result.buy_side_liquidity:
+
                 liquidity = "BUY_SIDE"
 
             elif liquidity_result.sell_side_liquidity:
+
                 liquidity = "SELL_SIDE"
 
             else:
+
                 liquidity = "NONE"
 
             # ------------------------------------------
@@ -209,7 +228,13 @@ class StrategyRunner:
 
             latest = window.iloc[-1]
 
+            # ------------------------------------------
+            # Setup Builder
+            # ------------------------------------------
+
             setup = self.builder.build(
+
+                dataframe=window,
 
                 ema_fast=indicators.ema_fast,
 
@@ -225,19 +250,19 @@ class StrategyRunner:
 
                 volume=indicators.volume,
 
-                high=float(latest["High"]),
-
-                low=float(latest["Low"]),
-
-                close=float(latest["Close"]),
-
-                swings=swings_df,
+                close=float(
+                    latest["Close"]
+                ),
 
                 liquidity=liquidity,
             )
 
             if not setup.valid:
                 return None
+
+            # ------------------------------------------
+            # Strategy Engine
+            # ------------------------------------------
 
             decision = self.strategy.process(
                 setup
@@ -249,27 +274,55 @@ class StrategyRunner:
             if not decision.valid:
                 return None
 
-            if decision.signal == "BUY":
+            # ------------------------------------------
+            # Convert Signal
+            # ------------------------------------------
+
+            signal = str(
+                decision.signal
+            ).upper()
+
+            if signal == "BUY":
+
                 side = OrderSide.BUY
 
-            elif decision.signal == "SELL":
+            elif signal == "SELL":
+
                 side = OrderSide.SELL
 
             else:
 
-                        return RunnerDecision(
+                return None
+
+            # ------------------------------------------
+            # Return to Backtest Engine
+            # ------------------------------------------
+
+            return RunnerDecision(
+
                 side=side,
-                entry=float(decision.entry_price),
-                stop_loss=float(decision.stop_loss),
-                target=float(decision.target_price),
-                confidence=float(decision.confidence),
+
+                entry=float(
+                    decision.entry_price
+                ),
+
+                stop_loss=float(
+                    decision.stop_loss
+                ),
+
+                target=float(
+                    decision.target_price
+                ),
+
+                confidence=float(
+                    decision.confidence
+                ),
             )
 
         except Exception as exc:
 
             print(
-                f"[StrategyRunner] Error : {exc}"
+                f"[StrategyRunner] Error: {exc}"
             )
 
             return None
-                

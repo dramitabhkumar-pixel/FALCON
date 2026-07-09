@@ -175,6 +175,10 @@ class SetupBuilder:
             swings
         )
 
+        print("\n================ LAST 10 SWINGS ================")
+        print(swings.tail(10))
+        print("================================================\n")
+
         # -------------------------------------------------
         # Swing Fibonacci
         # -------------------------------------------------
@@ -455,6 +459,20 @@ class SetupBuilder:
         # Final Validation
         # -------------------------------------------------
 
+
+        print("\n========== SETUP DEBUG ==========")
+        print("Direction      :", setup.direction)
+        print("Structure      :", setup.structure)
+        print("Fibonacci      :", setup.fibonacci)
+        print("Pullback       :", fibonacci.pullback_valid)
+        print("Golden Zone    :", setup.golden_zone)
+        print("Entry Price    :", setup.entry_price)
+        print("Stop Loss      :", setup.stop_loss)
+        print("Target Price   :", setup.target_price)
+        print("Risk Reward    :", setup.risk_reward)
+        print("=================================\n")
+
+        
         setup.valid = (
 
             setup.direction != "NONE"

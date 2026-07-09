@@ -92,10 +92,7 @@ class BacktestEngine:
 
         for window, bar in feed:
 
-            self.trade_engine.on_bar(
-                bar,
-                entry_time=bar.name,
-            )
+            self.trade_engine.on_bar(bar)
 
             setup = self.strategy.evaluate(window)
 
@@ -105,11 +102,12 @@ class BacktestEngine:
             signals += 1
 
             order = self.trade_engine.try_entry(
-                side=setup.side,
-                entry=setup.entry,
-                stop_loss=setup.stop_loss,
-                target=setup.target,
-            )
+    side=setup.side,
+    entry=setup.entry,
+    stop_loss=setup.stop_loss,
+    target=setup.target,
+    entry_time=bar.name,
+)
 
             if order is not None:
                 entries += 1

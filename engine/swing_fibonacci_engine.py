@@ -31,7 +31,7 @@ class SwingFibonacciEngine:
     - Return SwingFibonacci object
     """
 
-    MIN_IMPULSE_CANDLES = 15
+    MIN_IMPULSE_CANDLES = 8
 
     REQUIRED_PRICE_COLUMNS = {
         "Open",
