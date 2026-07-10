@@ -1,143 +1,154 @@
 """
 =========================================================
 Project FALCON
-Enums
-Version : 1.0
+Core Enums
+Version : 2.0
 =========================================================
+
+Centralized enumerations used across the entire FALCON
+architecture.
 """
 
-from enum import Enum, auto
+from enum import Enum
 
 
-# =========================================================
-# Trend
-# =========================================================
+class FalconEnum(str, Enum):
+    """Base class for all FALCON enums."""
 
-class Trend(Enum):
-
-    UNKNOWN = auto()
-
-    RANGE = auto()
-
-    POTENTIAL_UPTREND = auto()
-
-    CONFIRMED_UPTREND = auto()
-
-    WEAKENING_UPTREND = auto()
-
-    POTENTIAL_DOWNTREND = auto()
-
-    CONFIRMED_DOWNTREND = auto()
-
-    WEAKENING_DOWNTREND = auto()
+    def __str__(self) -> str:
+        return self.value
 
 
-# =========================================================
-# Market Bias
-# =========================================================
-
-class Bias(Enum):
-
-    NEUTRAL = auto()
-
-    BULLISH = auto()
-
-    BEARISH = auto()
+class Trend(FalconEnum):
+    UNKNOWN = "UNKNOWN"
+    RANGE = "RANGE"
+    POTENTIAL_UPTREND = "POTENTIAL_UPTREND"
+    CONFIRMED_UPTREND = "CONFIRMED_UPTREND"
+    WEAKENING_UPTREND = "WEAKENING_UPTREND"
+    POTENTIAL_DOWNTREND = "POTENTIAL_DOWNTREND"
+    CONFIRMED_DOWNTREND = "CONFIRMED_DOWNTREND"
+    WEAKENING_DOWNTREND = "WEAKENING_DOWNTREND"
 
 
-# =========================================================
-# Market Strength
-# =========================================================
-
-class Strength(Enum):
-
-    VERY_WEAK = auto()
-
-    WEAK = auto()
-
-    NORMAL = auto()
-
-    STRONG = auto()
-
-    VERY_STRONG = auto()
+class Bias(FalconEnum):
+    NEUTRAL = "NEUTRAL"
+    BULLISH = "BULLISH"
+    BEARISH = "BEARISH"
 
 
-# =========================================================
-# Structure Events
-# =========================================================
-
-class StructureEvent(Enum):
-
-    NONE = auto()
-
-    BOS_BULLISH = auto()
-
-    BOS_BEARISH = auto()
-
-    CHOCH_BULLISH = auto()
-
-    CHOCH_BEARISH = auto()
-
-    LIQUIDITY_SWEEP = auto()
+class Strength(FalconEnum):
+    VERY_WEAK = "VERY_WEAK"
+    WEAK = "WEAK"
+    NORMAL = "NORMAL"
+    STRONG = "STRONG"
+    VERY_STRONG = "VERY_STRONG"
 
 
-# =========================================================
-# Trade Signal
-# =========================================================
-
-class Signal(Enum):
-
-    NO_TRADE = auto()
-
-    WATCHLIST = auto()
-
-    BUY = auto()
-
-    SELL = auto()
+class Structure(FalconEnum):
+    UNKNOWN = "UNKNOWN"
+    RANGE = "RANGE"
+    BULLISH = "BULLISH"
+    BEARISH = "BEARISH"
 
 
-# =========================================================
-# Session
-# =========================================================
-
-class Session(Enum):
-
-    PREMARKET = auto()
-
-    OPENING = auto()
-
-    MORNING = auto()
-
-    MIDDAY = auto()
-
-    AFTERNOON = auto()
-
-    CLOSING = auto()
-
-    CLOSED = auto()
+class StructureEvent(FalconEnum):
+    NONE = "NONE"
+    BOS_BULLISH = "BOS_BULLISH"
+    BOS_BEARISH = "BOS_BEARISH"
+    CHOCH_BULLISH = "CHOCH_BULLISH"
+    CHOCH_BEARISH = "CHOCH_BEARISH"
+    LIQUIDITY_SWEEP = "LIQUIDITY_SWEEP"
 
 
-# =========================================================
-# Volatility
-# =========================================================
-
-class Volatility(Enum):
-
-    LOW = auto()
-
-    NORMAL = auto()
-
-    HIGH = auto()
+class SwingType(FalconEnum):
+    HIGH = "HIGH"
+    LOW = "LOW"
 
 
-# =========================================================
-# Trade Direction
-# =========================================================
+class SwingClassification(FalconEnum):
+    UNKNOWN = "UNKNOWN"
+    HH = "HH"
+    HL = "HL"
+    LH = "LH"
+    LL = "LL"
 
-class Direction(Enum):
 
-    LONG = auto()
+class FibonacciDirection(FalconEnum):
+    NONE = "NONE"
+    BULLISH = "BULLISH"
+    BEARISH = "BEARISH"
 
-    SHORT = auto()
 
-    NONE = auto()
+class LiquidityType(FalconEnum):
+    NONE = "NONE"
+    EQUAL_HIGHS = "EQUAL_HIGHS"
+    EQUAL_LOWS = "EQUAL_LOWS"
+    BUY_SIDE = "BUY_SIDE"
+    SELL_SIDE = "SELL_SIDE"
+
+
+class Signal(FalconEnum):
+    NO_TRADE = "NO_TRADE"
+    WATCHLIST = "WATCHLIST"
+    BUY = "BUY"
+    SELL = "SELL"
+
+
+class Session(FalconEnum):
+    PREMARKET = "PREMARKET"
+    OPENING = "OPENING"
+    MORNING = "MORNING"
+    MIDDAY = "MIDDAY"
+    AFTERNOON = "AFTERNOON"
+    CLOSING = "CLOSING"
+    CLOSED = "CLOSED"
+
+
+class Volatility(FalconEnum):
+    LOW = "LOW"
+    NORMAL = "NORMAL"
+    HIGH = "HIGH"
+
+
+class Direction(FalconEnum):
+    NONE = "NONE"
+    LONG = "LONG"
+    SHORT = "SHORT"
+
+
+class ConfidenceGrade(FalconEnum):
+    D = "D"
+    C = "C"
+    B = "B"
+    A = "A"
+    A_PLUS = "A_PLUS"
+
+
+class TradeStatus(FalconEnum):
+    PENDING = "PENDING"
+    ACTIVE = "ACTIVE"
+    CLOSED = "CLOSED"
+    CANCELLED = "CANCELLED"
+    REJECTED = "REJECTED"
+
+
+class ExitReason(FalconEnum):
+    NONE = "NONE"
+    TARGET = "TARGET"
+    STOPLOSS = "STOPLOSS"
+    TRAILING_STOP = "TRAILING_STOP"
+    TIME_EXIT = "TIME_EXIT"
+    OPPOSITE_SIGNAL = "OPPOSITE_SIGNAL"
+    MANUAL = "MANUAL"
+
+
+class OrderBlockType(FalconEnum):
+    NONE = "NONE"
+    BULLISH = "BULLISH"
+    BEARISH = "BEARISH"
+
+
+class FVGType(FalconEnum):
+    NONE = "NONE"
+    BULLISH = "BULLISH"
+    BEARISH = "BEARISH"
