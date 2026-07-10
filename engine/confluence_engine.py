@@ -1,169 +1,289 @@
-from config.confluence_config import (
-    CONFLUENCE_WEIGHTS,
-    BUY_THRESHOLD,
-    STRONG_BUY_THRESHOLD,
-    SELL_THRESHOLD,
-    STRONG_SELL_THRESHOLD,
-    MIN_ADX,
-    MIN_RSI_BULL,
-    MAX_RSI_BEAR,
-)
+"""
+=========================================================
+PROJECT FALCON
+Confluence Engine
+Version : 2.0
+=========================================================
 
+Validates a TradeSetup and produces a ConfluenceResult.
+
+This engine performs ONLY validation.
+
+No scoring.
+No confidence calculation.
+No trade execution.
+"""
+
+from __future__ import annotations
+
+from models.trade_setup import TradeSetup
 from models.confluence_result import ConfluenceResult
+from models.enums import (
+    Trend,
+    Structure,
+    Direction,
+)
+from strategy.strategy_config import CONFIG
 
 
 class ConfluenceEngine:
+    """
+    Validates the confluence of a TradeSetup.
 
-    def __init__(self):
-        print("[ConfluenceEngine] Initialized")
+    Input
+    -----
+    TradeSetup
+
+    Output
+    ------
+    ConfluenceResult
+    """
+
+    # =====================================================
+    # Trend
+    # =====================================================
+
+    @staticmethod
+    def _trend_alignment(
+        setup: TradeSetup,
+    ) -> bool:
+
+        if setup.direction == Direction.LONG:
+
+            return (
+                setup.trend
+                == Trend.CONFIRMED_UPTREND
+            )
+
+        if setup.direction == Direction.SHORT:
+
+            return (
+                setup.trend
+                == Trend.CONFIRMED_DOWNTREND
+            )
+
+        return False
+
+    # =====================================================
+    # Structure
+    # =====================================================
+
+    @staticmethod
+    def _structure_alignment(
+        setup: TradeSetup,
+    ) -> bool:
+
+        if setup.direction == Direction.LONG:
+
+            return (
+                setup.structure
+                == Structure.BULLISH
+            )
+
+        if setup.direction == Direction.SHORT:
+
+            return (
+                setup.structure
+                == Structure.BEARISH
+            )
+
+        return False
+
+    # =====================================================
+    # Momentum
+    # =====================================================
+
+    @staticmethod
+    def _momentum_confirmation(
+        setup: TradeSetup,
+    ) -> bool:
+
+        if setup.adx < CONFIG.ADX_MINIMUM:
+            return False
+
+        if setup.direction == Direction.LONG:
+
+            return (
+                setup.rsi >= CONFIG.RSI_LONG
+            )
+
+        if setup.direction == Direction.SHORT:
+
+            return (
+                setup.rsi <= CONFIG.RSI_SHORT
+            )
+
+        return False
+
+    # =====================================================
+    # Reasons
+    # =====================================================
+
+    @staticmethod
+    def _collect_reasons(
+        result: ConfluenceResult,
+    ) -> None:
+
+        if result.trend_alignment:
+            result.reasons.append(
+                "Trend aligned."
+            )
+
+        if result.structure_alignment:
+            result.reasons.append(
+                "Structure aligned."
+            )
+
+        if result.ema_alignment:
+            result.reasons.append(
+                "EMA aligned."
+            )
+
+        if result.momentum_confirmation:
+            result.reasons.append(
+                "Momentum confirmed."
+            )
+
+        if result.liquidity_confirmation:
+            result.reasons.append(
+                "Liquidity confirmed."
+            )
+
+        if result.fibonacci_confirmation:
+            result.reasons.append(
+                "Fibonacci confirmed."
+            )
+
+        if result.golden_zone_confirmation:
+            result.reasons.append(
+                "Golden Zone confirmed."
+            )
+
+        if result.bos_confirmation:
+            result.reasons.append(
+                "Break of Structure confirmed."
+            )
+
+        if result.choch_confirmation:
+            result.reasons.append(
+                "CHOCH confirmed."
+            )
+
+        if result.order_block_confirmation:
+            result.reasons.append(
+                "Order Block confirmed."
+            )
+
+        if result.fair_value_gap_confirmation:
+            result.reasons.append(
+                "Fair Value Gap confirmed."
+            )
+
+    # =====================================================
+    # Public API
+    # =====================================================
 
     def evaluate(
         self,
-        market_structure,
-        market_context,
-        swing_direction,
-        liquidity,
-        ema_bullish,
-        adx,
-        rsi,
-        atr_high,
-        fib_golden_zone,
-    ):
-        # -----------------------------
-        # Bullish Score
-        # -----------------------------
-        bullish_score = 0
-        bull_reasons = []
+        setup: TradeSetup,
+    ) -> ConfluenceResult:
+                if setup is None:
+                 raise ValueError(
+                "TradeSetup cannot be None."
+            )
 
-        if market_structure == "BULLISH":
-            bullish_score += CONFLUENCE_WEIGHTS["market_structure"]
-            bull_reasons.append("Bullish market structure")
+                if not setup.valid:
+                 raise ValueError(
+                "TradeSetup is invalid."
+            )
 
-        if market_context == "UPTREND":
-            bullish_score += CONFLUENCE_WEIGHTS["market_context"]
-            bull_reasons.append("Uptrend confirmed")
+                result = ConfluenceResult()
 
-        if swing_direction == "HH_HL":
-            bullish_score += CONFLUENCE_WEIGHTS["swing"]
-            bull_reasons.append("HH-HL swing sequence")
+        # =================================================
+        # Direction
+        # =================================================
 
-        if liquidity == "BUY_SIDE":
-            bullish_score += CONFLUENCE_WEIGHTS["liquidity"]
-            bull_reasons.append("Buy-side liquidity")
+                result.direction = setup.direction
 
-        if ema_bullish:
-            bullish_score += CONFLUENCE_WEIGHTS["ema"]
-            bull_reasons.append("EMA bullish crossover")
+        # =================================================
+        # Confluence Confirmations
+        # =================================================
 
-        if adx >= MIN_ADX:
-            bullish_score += CONFLUENCE_WEIGHTS["adx"]
-            bull_reasons.append(f"Strong Trend (ADX = {adx})")
-
-        if rsi >= MIN_RSI_BULL:
-            bullish_score += CONFLUENCE_WEIGHTS["rsi"]
-            bull_reasons.append(f"Bullish RSI ({rsi})")
-
-        if atr_high:
-            bullish_score += CONFLUENCE_WEIGHTS["atr"]
-            bull_reasons.append("High Volatility")
-
-        if fib_golden_zone and market_context == "UPTREND":
-            bullish_score += CONFLUENCE_WEIGHTS["fibonacci"]
-            bull_reasons.append("Inside Fibonacci Golden Zone (Bullish)")
-
-        # -----------------------------
-        # Bearish Score
-        # -----------------------------
-        bearish_score = 0
-        bear_reasons = []
-
-        if market_structure == "BEARISH":
-            bearish_score += CONFLUENCE_WEIGHTS["market_structure"]
-            bear_reasons.append("Bearish market structure")
-
-        if market_context == "DOWNTREND":
-            bearish_score += CONFLUENCE_WEIGHTS["market_context"]
-            bear_reasons.append("Downtrend confirmed")
-
-        if swing_direction == "LH_LL":
-            bearish_score += CONFLUENCE_WEIGHTS["swing"]
-            bear_reasons.append("LH-LL swing sequence")
-
-        if liquidity == "SELL_SIDE":
-            bearish_score += CONFLUENCE_WEIGHTS["liquidity"]
-            bear_reasons.append("Sell-side liquidity")
-
-        if not ema_bullish:
-            bearish_score += CONFLUENCE_WEIGHTS["ema"]
-            bear_reasons.append("EMA bearish crossover")
-
-        if adx >= MIN_ADX:
-            bearish_score += CONFLUENCE_WEIGHTS["adx"]
-            bear_reasons.append(f"Strong Trend (ADX = {adx})")
-
-        if rsi <= MAX_RSI_BEAR:
-            bearish_score += CONFLUENCE_WEIGHTS["rsi"]
-            bear_reasons.append(f"Bearish RSI ({rsi})")
-
-        if atr_high:
-            bearish_score += CONFLUENCE_WEIGHTS["atr"]
-            bear_reasons.append("High Volatility")
-
-        if fib_golden_zone and market_context == "DOWNTREND":
-            bearish_score += CONFLUENCE_WEIGHTS["fibonacci"]
-            bear_reasons.append("Inside Fibonacci Golden Zone (Bearish)")
-
-        # -----------------------------
-        # Determine Direction
-        # -----------------------------
-        if bullish_score >= bearish_score:
-            score = bullish_score
-            reasons = bull_reasons
-            confidence = round((bullish_score / 100) * 100)
-
-            if score >= STRONG_BUY_THRESHOLD:
-                signal = "STRONG BUY"
-            elif score >= BUY_THRESHOLD:
-                signal = "BUY"
-            elif score >= 50:
-                signal = "WATCH"
-            else:
-                signal = "NO TRADE"
-
-            trade_grade = self._get_grade(score)
-        else:
-            score = bearish_score
-            reasons = bear_reasons
-            confidence = round((bearish_score / 100) * 100)
-
-            if score >= STRONG_SELL_THRESHOLD:
-                signal = "STRONG SELL"
-            elif score >= SELL_THRESHOLD:
-                signal = "SELL"
-            elif score >= 50:
-                signal = "WATCH"
-            else:
-                signal = "NO TRADE"
-
-            trade_grade = self._get_grade(score)
-
-        return ConfluenceResult(
-            score=score,
-            signal=signal,
-            confidence=f"{confidence}%",
-            trade_grade=trade_grade,
-            bullish_score=bullish_score,
-            bearish_score=bearish_score,
-            reasons=reasons,
+                result.trend_alignment = (
+            self._trend_alignment(
+                setup,
+            )
         )
 
-    def _get_grade(self, score: int) -> str:
-        if score >= 95:
-            return "A+"
-        elif score >= 85:
-            return "A"
-        elif score >= 70:
-            return "B"
-        elif score >= 50:
-            return "C"
-        return "REJECT"
+                result.structure_alignment = (
+            self._structure_alignment(
+                setup,
+            )
+        )
+
+                result.ema_alignment = (
+            setup.ema_alignment
+        )
+
+                result.momentum_confirmation = (
+            self._momentum_confirmation(
+                setup,
+            )
+        )
+
+                result.liquidity_confirmation = (
+            setup.liquidity
+        )
+
+                result.fibonacci_confirmation = (
+            setup.fibonacci
+        )
+
+                result.golden_zone_confirmation = (
+            setup.golden_zone
+        )
+
+                result.bos_confirmation = (
+            setup.bos
+        )
+
+                result.choch_confirmation = (
+            setup.choch
+        )
+
+                result.order_block_confirmation = (
+            setup.order_block
+        )
+
+                result.fair_value_gap_confirmation = (
+            setup.fair_value_gap
+        )
+
+        # =================================================
+        # Diagnostics
+        # =================================================
+
+                self._collect_reasons(
+            result,
+        )
+
+        # =================================================
+        # Validation
+        # =================================================
+
+                result.valid = True
+
+                return result
+
+    # =====================================================
+    # Callable Interface
+    # =====================================================
+
+    def __call__(
+        self,
+        setup: TradeSetup,
+    ) -> ConfluenceResult:
+
+        return self.evaluate(
+            setup,
+        )

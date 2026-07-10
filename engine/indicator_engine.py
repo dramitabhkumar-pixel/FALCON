@@ -1,65 +1,59 @@
 """
-==========================================================
-FALCON INDICATOR ENGINE
-Version : 1.0
+=========================================================
+PROJECT FALCON
+Indicator Engine
+Version : 2.0
+=========================================================
 
-Calculates
+Calculates all technical indicators required by
+Project FALCON.
 
-• EMA Fast
-• EMA Slow
-• RSI
-• ATR
-• ADX
-• Average ATR
+Input
+-----
+OHLCV DataFrame
 
-Author : Amitabh Kumar + ChatGPT
-==========================================================
+Output
+------
+IndicatorResult
+
+Architecture
+------------
+DataFrame
+      ↓
+Indicator Engine
+      ↓
+IndicatorResult
 """
 
 from __future__ import annotations
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-from core.base_engine import BaseEngine
-from core.models import IndicatorResult
-
-from config.indicator_config import (
-    EMA_FAST,
-    EMA_SLOW,
-    RSI_PERIOD,
-    ATR_PERIOD,
-    ADX_PERIOD,
-)
+from models.indicator_result import IndicatorResult
+from strategy.strategy_config import CONFIG
 
 
-class IndicatorEngine(BaseEngine):
-
+class IndicatorEngine:
     """
-    Computes all primary technical indicators
-    required by Project FALCON.
-
-    Input
-    -----
-    OHLC DataFrame
-
-    Output
-    ------
-    IndicatorResult
+    Calculates all primary indicators used by
+    Project FALCON.
     """
 
-    def __init__(self):
-
-        super().__init__()
-
-    # ---------------------------------------------------------
+    # =====================================================
     # Validation
-    # ---------------------------------------------------------
+    # =====================================================
 
+    @staticmethod
     def _validate_dataframe(
-        self,
-        df: pd.DataFrame
+        df: pd.DataFrame,
     ) -> None:
+
+        if df is None:
+            raise ValueError("DataFrame cannot be None.")
+
+        if df.empty:
+            raise ValueError("DataFrame is empty.")
 
         required = [
             "open",
@@ -68,32 +62,38 @@ class IndicatorEngine(BaseEngine):
             "close",
         ]
 
-        missing = []
+        columns = [c.lower() for c in df.columns]
 
-        for column in required:
-
-            if column not in df.columns:
-
-                missing.append(column)
+        missing = [
+            column
+            for column in required
+            if column not in columns
+        ]
 
         if missing:
 
             raise ValueError(
-                f"Missing OHLC columns : {missing}"
+                f"Missing required columns: {missing}"
             )
 
-        if len(df) < 50:
+        if len(df) < max(
+            CONFIG.SLOW_EMA,
+            CONFIG.ATR_PERIOD,
+            CONFIG.RSI_PERIOD,
+            CONFIG.ADX_PERIOD,
+            50,
+        ):
 
             raise ValueError(
-                "Minimum 50 candles required."
+                "Insufficient candles for indicator calculation."
             )
 
-    # ---------------------------------------------------------
+    # =====================================================
     # EMA
-    # ---------------------------------------------------------
+    # =====================================================
 
+    @staticmethod
     def _ema(
-        self,
         series: pd.Series,
         period: int,
     ) -> pd.Series:
@@ -107,49 +107,12 @@ class IndicatorEngine(BaseEngine):
             .mean()
         )
 
-    # ---------------------------------------------------------
-    # ATR
-    # ---------------------------------------------------------
-
-    def _atr(
-        self,
-        df: pd.DataFrame,
-        period: int,
-    ) -> pd.Series:
-
-        high = df["high"]
-
-        low = df["low"]
-
-        close = df["close"]
-
-        previous_close = close.shift(1)
-
-        tr1 = high - low
-
-        tr2 = (high - previous_close).abs()
-
-        tr3 = (low - previous_close).abs()
-
-        tr = pd.concat(
-            [tr1, tr2, tr3],
-            axis=1
-        ).max(axis=1)
-
-        atr = (
-            tr
-            .rolling(period)
-            .mean()
-        )
-
-        return atr
-
-    # ---------------------------------------------------------
+    # =====================================================
     # RSI
-    # ---------------------------------------------------------
+    # =====================================================
 
+    @staticmethod
     def _rsi(
-        self,
         close: pd.Series,
         period: int,
     ) -> pd.Series:
@@ -177,34 +140,80 @@ class IndicatorEngine(BaseEngine):
         rsi = 100 - (100 / (1 + rs))
 
         return rsi.fillna(50)
-    
-    # ---------------------------------------------------------
-    # ADX
-    # ---------------------------------------------------------
 
-    def _adx(
-        self,
+    # =====================================================
+    # ATR
+    # =====================================================
+
+    @staticmethod
+    def _atr(
         df: pd.DataFrame,
         period: int,
     ) -> pd.Series:
 
         high = df["high"]
+
+        low = df["low"]
+
+        close = df["close"]
+
+        previous_close = close.shift(1)
+
+        tr1 = high - low
+
+        tr2 = (high - previous_close).abs()
+
+        tr3 = (low - previous_close).abs()
+
+        tr = pd.concat(
+            [
+                tr1,
+                tr2,
+                tr3,
+            ],
+            axis=1,
+        ).max(axis=1)
+
+        return (
+            tr
+            .rolling(period)
+            .mean()
+        )
+
+    # =====================================================
+    # ADX
+    # =====================================================
+
+    @staticmethod
+    def _adx(
+        df: pd.DataFrame,
+        period: int,
+    ) -> pd.Series:       
+    
+        high = df["high"]
+
         low = df["low"]
 
         plus_dm = high.diff()
+
         minus_dm = -low.diff()
 
         plus_dm = plus_dm.where(
-            (plus_dm > minus_dm) & (plus_dm > 0),
+            (plus_dm > minus_dm) &
+            (plus_dm > 0),
             0.0,
         )
 
         minus_dm = minus_dm.where(
-            (minus_dm > plus_dm) & (minus_dm > 0),
+            (minus_dm > plus_dm) &
+            (minus_dm > 0),
             0.0,
         )
 
-        atr = self._atr(df, period)
+        atr = IndicatorEngine._atr(
+            df,
+            period,
+        )
 
         plus_di = (
             100
@@ -235,31 +244,12 @@ class IndicatorEngine(BaseEngine):
 
         return adx.fillna(0)
 
-    # ---------------------------------------------------------
-    # Average ATR
-    # ---------------------------------------------------------
+    # =====================================================
+    # Helpers
+    # =====================================================
 
-    def _average_atr(
-        self,
-        atr: pd.Series,
-        period: int = 50,
-    ) -> float:
-
-        valid = atr.dropna()
-
-        if len(valid) == 0:
-            return 0.0
-
-        return float(
-            valid.tail(period).mean()
-        )
-
-    # ---------------------------------------------------------
-    # Latest Value
-    # ---------------------------------------------------------
-
+    @staticmethod
     def _latest(
-        self,
         series: pd.Series,
         default: float = 0.0,
     ) -> float:
@@ -267,87 +257,94 @@ class IndicatorEngine(BaseEngine):
         value = series.iloc[-1]
 
         if pd.isna(value):
+
             return default
 
         return float(value)
-    
-    # ---------------------------------------------------------
-    # ANALYZE
-    # ---------------------------------------------------------
+
+    @staticmethod
+    def _average_atr(
+        atr: pd.Series,
+        period: int = 50,
+    ) -> float:
+
+        valid = atr.dropna()
+
+        if valid.empty:
+
+            return 0.0
+
+        return float(
+            valid.tail(period).mean()
+        )
+
+    # =====================================================
+    # Public API
+    # =====================================================
 
     def analyze(
         self,
         df: pd.DataFrame,
     ) -> IndicatorResult:
 
-        self.log("Running Indicator Engine")
-
         self._validate_dataframe(df)
 
         df = df.copy()
-        df.columns = [c.lower() for c in df.columns]
 
-        # -------------------------------------------------
-        # EMA
-        # -------------------------------------------------
+        df.columns = [
+            column.lower()
+            for column in df.columns
+        ]
 
         ema_fast_series = self._ema(
             df["close"],
-            EMA_FAST,
+            CONFIG.FAST_EMA,
         )
 
         ema_slow_series = self._ema(
             df["close"],
-            EMA_SLOW,
+            CONFIG.SLOW_EMA,
         )
-
-        # -------------------------------------------------
-        # RSI
-        # -------------------------------------------------
 
         rsi_series = self._rsi(
             df["close"],
-            RSI_PERIOD,
+            CONFIG.RSI_PERIOD,
         )
-
-        # -------------------------------------------------
-        # ATR
-        # -------------------------------------------------
 
         atr_series = self._atr(
             df,
-            ATR_PERIOD,
+            CONFIG.ATR_PERIOD,
         )
-
-        avg_atr = self._average_atr(
-            atr_series
-        )
-
-        # -------------------------------------------------
-        # ADX
-        # -------------------------------------------------
 
         adx_series = self._adx(
             df,
-            ADX_PERIOD,
+            CONFIG.ADX_PERIOD,
         )
 
-        # -------------------------------------------------
-        # Latest Values
-        # -------------------------------------------------
+        avg_atr = self._average_atr(
+            atr_series,
+        )
 
-        ema_fast = self._latest(ema_fast_series)
+        ema_fast = self._latest(
+            ema_fast_series,
+        )
 
-        ema_slow = self._latest(ema_slow_series)
+        ema_slow = self._latest(
+            ema_slow_series,
+        )
 
         rsi = self._latest(
             rsi_series,
-            default=50.0,
+            50.0,
         )
 
-        atr = self._latest(atr_series)
+        atr = self._latest(
+            atr_series,
+        )
 
-        adx = self._latest(adx_series)
+        adx = self._latest(
+            adx_series,
+        )
 
         volume = 0.0
 
@@ -363,11 +360,19 @@ class IndicatorEngine(BaseEngine):
 
                 volume = 0.0
 
-        # -------------------------------------------------
-        # Result
-        # -------------------------------------------------
+            ema_alignment = (
+            ema_fast > ema_slow
+        )
+
+        high_volatility = (
+            atr >= avg_atr
+        )
 
         return IndicatorResult(
+
+            # =================================================
+            # Moving Averages
+            # =================================================
 
             ema_fast=round(
                 ema_fast,
@@ -379,6 +384,12 @@ class IndicatorEngine(BaseEngine):
                 4,
             ),
 
+            ema_alignment=ema_alignment,
+
+            # =================================================
+            # Momentum
+            # =================================================
+
             rsi=round(
                 rsi,
                 2,
@@ -388,6 +399,10 @@ class IndicatorEngine(BaseEngine):
                 adx,
                 2,
             ),
+
+            # =================================================
+            # Volatility
+            # =================================================
 
             atr=round(
                 atr,
@@ -399,5 +414,18 @@ class IndicatorEngine(BaseEngine):
                 4,
             ),
 
+            high_volatility=high_volatility,
+
+            # =================================================
+            # Volume
+            # =================================================
+
             volume=volume,
-        )
+
+            # =================================================
+            # Validation
+            # =================================================
+
+            valid=True,
+
+        )   

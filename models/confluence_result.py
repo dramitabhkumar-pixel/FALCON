@@ -5,79 +5,71 @@ Confluence Result Model
 Version : 1.0
 =========================================================
 
-Pure domain model representing the output of the
-Confluence Engine.
+Represents the output of the Confluence Engine.
 
-Contains no business logic.
+This model contains ONLY the confluence evaluation.
+No business logic belongs here.
 """
 
-from __future__ import annotations
+from dataclasses import dataclass, field
+from typing import List
 
-from dataclasses import dataclass
-
-from models.enums import (
-    Trend,
-    MarketBias,
-    MarketStrength,
-    StructureType,
-    TradeDirection,
-)
+from models.enums import Direction
 
 
 @dataclass(slots=True)
 class ConfluenceResult:
     """
-    Final confluence evaluation produced by
-    Confluence Engine.
+    Result produced by the Confluence Engine.
 
-    This model is consumed by the Confidence Engine
-    and Strategy Engine.
+    This model represents whether the various
+    confluence conditions required by the strategy
+    have been satisfied.
+
+    It does NOT calculate confidence, grades,
+    or trading decisions.
     """
 
-    # -------------------------------------------------
-    # Market Context
-    # -------------------------------------------------
+    # =====================================================
+    # Trade Direction
+    # =====================================================
 
-    trend: Trend = Trend.UNKNOWN
-    bias: MarketBias = MarketBias.NEUTRAL
-    strength: MarketStrength = MarketStrength.NORMAL
+    direction: Direction = Direction.NONE
 
-    # -------------------------------------------------
-    # Structure
-    # -------------------------------------------------
-
-    structure: StructureType = StructureType.UNKNOWN
-
-    # -------------------------------------------------
-    # Direction
-    # -------------------------------------------------
-
-    direction: TradeDirection = TradeDirection.NONE
-
-    # -------------------------------------------------
-    # Confluence Components
-    # -------------------------------------------------
+    # =====================================================
+    # Confluence Confirmations
+    # =====================================================
 
     trend_alignment: bool = False
 
     structure_alignment: bool = False
 
-    fibonacci_alignment: bool = False
-
-    liquidity_alignment: bool = False
-
     ema_alignment: bool = False
 
-    momentum_alignment: bool = False
+    momentum_confirmation: bool = False
+
+    liquidity_confirmation: bool = False
+
+    fibonacci_confirmation: bool = False
+
+    golden_zone_confirmation: bool = False
 
     bos_confirmation: bool = False
 
     choch_confirmation: bool = False
 
-    # -------------------------------------------------
-    # Final Result
-    # -------------------------------------------------
+    order_block_confirmation: bool = False
 
-    score: float = 0.0
+    fair_value_gap_confirmation: bool = False
+
+    # =====================================================
+    # Diagnostics
+    # =====================================================
+
+    reasons: List[str] = field(default_factory=list)
+
+    # =====================================================
+    # Validation
+    # =====================================================
 
     valid: bool = False
