@@ -6,12 +6,12 @@ Version : 2.0
 """
 
 from dataclasses import dataclass
-
+from datetime import datetime
 
 @dataclass
 class Candle:
 
-    timestamp: str
+    timestamp: datetime
 
     open: float
     high: float

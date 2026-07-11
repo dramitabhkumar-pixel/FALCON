@@ -1,191 +1,169 @@
 """
 =========================================================
 PROJECT FALCON
-Confidence Engine V1.0
+Confidence Engine
+Version : 3.0
 =========================================================
 
-Calculates confidence score (0-100) for every setup.
+Evaluates the confidence of a validated ConfluenceResult.
+
+TradeSetup
+    ↓
+ConfluenceEngine
+    ↓
+ConfluenceResult
+    ↓
+ConfidenceEngine
+    ↓
+ConfidenceResult
 """
 
-from dataclasses import dataclass, field
-from typing import Any
+from __future__ import annotations
 
-
-@dataclass(slots=True)
-class ConfidenceResult:
-    score: float
-    passed: bool
-    grade: str
-    confidence: str
-    reasons: list[str] = field(default_factory=list)
+from models.confluence_result import ConfluenceResult
+from models.confidence_result import ConfidenceResult
+from models.enums import ConfidenceGrade
 
 
 class ConfidenceEngine:
     """
-    Computes confidence score for a TradeSetup.
-
-    The engine is intentionally deterministic so that
-    historical backtests and live trading produce identical
-    confidence values.
+    Converts a ConfluenceResult into a ConfidenceResult.
     """
 
-    MINIMUM_SCORE = 80.0
+    # =====================================================
+    # Weight Configuration
+    # =====================================================
 
-    def __init__(self) -> None:
+    WEIGHTS = {
 
-        self.weights = {
-            "trend": 20,
-            "structure": 20,
-            "ema_alignment": 10,
-            "bos": 10,
-            "choch": 10,
-            "golden_zone": 10,
-            "adx": 10,
-            "rsi": 5,
-            "liquidity": 5,
-        }
+        "trend_alignment": 15,
 
-    # ---------------------------------------------------------
+        "structure_alignment": 15,
 
-    @staticmethod
-    def _grade(score: float) -> str:
+        "ema_alignment": 10,
 
-        if score >= 90:
-            return "A+"
+        "momentum_confirmation": 10,
 
-        if score >= 80:
-            return "A"
+        "liquidity_confirmation": 10,
 
-        if score >= 70:
-            return "B"
+        "fibonacci_confirmation": 10,
 
-        if score >= 60:
-            return "C"
+        "golden_zone_confirmation": 10,
 
-        return "D"
+        "bos_confirmation": 5,
 
-    # ---------------------------------------------------------
+        "choch_confirmation": 5,
+
+        "order_block_confirmation": 5,
+
+        "fair_value_gap_confirmation": 5,
+    }
+
+    MINIMUM_CONFIDENCE = 80
+
+    # =====================================================
+    # Validation
+    # =====================================================
 
     @staticmethod
-    def _confidence(score: float) -> str:
+    def _validate(
+        confluence: ConfluenceResult,
+    ) -> None:
 
-        if score >= 90:
-            return "VERY HIGH"
-
-        if score >= 80:
-            return "HIGH"
-
-        if score >= 60:
-            return "MEDIUM"
-
-        return "LOW"
-
-    # ---------------------------------------------------------
-
-    def calculate(self, setup: Any) -> ConfidenceResult:
-        """
-        Calculate confidence score for the supplied TradeSetup.
-        """
-
-        if setup is None:
-            return ConfidenceResult(
-                score=0.0,
-                passed=False,
-                grade="D",
-                confidence="LOW",
-                reasons=[],
+        if confluence is None:
+            raise ValueError(
+                "ConfluenceResult cannot be None."
             )
 
+        if not confluence.valid:
+            raise ValueError(
+                "ConfluenceResult is invalid."
+            )
+
+    # =====================================================
+    # Grade
+    # =====================================================
+
+    @staticmethod
+    def _calculate_grade(
+        score: int,
+    ) -> ConfidenceGrade:
+
+        if score >= 90:
+            return ConfidenceGrade.A_PLUS
+
+        if score >= 80:
+            return ConfidenceGrade.A
+
+        if score >= 70:
+            return ConfidenceGrade.B
+
+        if score >= 60:
+            return ConfidenceGrade.C
+
+        return ConfidenceGrade.D
+        # =====================================================
+    # Public API
+    # =====================================================
+
+    def evaluate(
+        self,
+        confluence: ConfluenceResult,
+    ) -> ConfidenceResult:
+
+        self._validate(
+            confluence,
+        )
+
         score = 0
+
         reasons: list[str] = []
 
-        checks = [
+        for field_name, weight in self.WEIGHTS.items():
 
-            (
-                "trend",
-                getattr(setup, "trend", "").upper() in (
-                    "UP",
-                    "DOWN",
-                    "UPTREND",
-                    "DOWNTREND",
-                ),
-                "Trend Confirmed",
-            ),
+            if getattr(
+                confluence,
+                field_name,
+            ):
 
-            (
-                "structure",
-                getattr(setup, "structure", "").upper() in (
-                    "BULLISH",
-                    "BEARISH",
-                ),
-                "Market Structure",
-            ),
+                score += weight
 
-            (
-                "ema_alignment",
-                bool(getattr(setup, "ema_alignment", False)),
-                "EMA Alignment",
-            ),
+                reasons.append(
+                    f"{field_name}: PASS"
+                )
 
-            (
-                "bos",
-                bool(getattr(setup, "bos", False)),
-                "Break of Structure",
-            ),
+            else:
 
-            (
-                "choch",
-                bool(getattr(setup, "choch", False)),
-                "CHOCH",
-            ),
-
-            (
-                "golden_zone",
-                bool(getattr(setup, "golden_zone", False)),
-                "Golden Zone",
-            ),
-
-            (
-                "adx",
-                float(getattr(setup, "adx", 0.0)) >= 20,
-                "ADX Strength",
-            ),
-
-            (
-                "rsi",
-                (
-                    (
-                        getattr(setup, "direction", "") == "BUY"
-                        and float(getattr(setup, "rsi", 0.0)) >= 60
-                    )
-                    or
-                    (
-                        getattr(setup, "direction", "") == "SELL"
-                        and float(getattr(setup, "rsi", 100.0)) <= 40
-                    )
-                ),
-                "RSI Confirmation",
-            ),
-
-            (
-                "liquidity",
-                bool(getattr(setup, "liquidity", False)),
-                "Liquidity",
-            ),
-        ]
-
-        for key, condition, description in checks:
-
-            if condition:
-                score += self.weights[key]
-                reasons.append(description)
-
-        score = round(min(score, 100), 2)
+                reasons.append(
+                    f"{field_name}: FAIL"
+                )
 
         return ConfidenceResult(
-            score=score,
-            passed=score >= self.MINIMUM_SCORE,
-            grade=self._grade(score),
-            confidence=self._confidence(score),
+
+            confidence_score=score,
+
+            grade=self._calculate_grade(
+                score,
+            ),
+
+            minimum_confidence_met=(
+                score >= self.MINIMUM_CONFIDENCE
+            ),
+
             reasons=reasons,
+
+            valid=True,
+        )
+
+    # =====================================================
+    # Callable Interface
+    # =====================================================
+
+    def __call__(
+        self,
+        confluence: ConfluenceResult,
+    ) -> ConfidenceResult:
+
+        return self.evaluate(
+            confluence,
         )

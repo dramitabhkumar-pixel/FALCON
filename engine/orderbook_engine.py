@@ -1,7 +1,10 @@
 from datetime import datetime
 
 from core.order import Order
-from enums import OrderStatus
+from models.enums import (
+     Direction,
+     TradeStatus,
+)
 
 
 class OrderBookEngine:
@@ -54,7 +57,7 @@ class OrderBookEngine:
 
             if order.order_id == order_id:
 
-                order.status = OrderStatus.FILLED
+                order.status = TradeStatus.ACTIVE
 
                 order.filled_price = fill_price
 
@@ -72,9 +75,9 @@ class OrderBookEngine:
 
                 order.closed_at = datetime.now()
 
-                order.status = OrderStatus.EXITED
+                order.status = TradeStatus.CLOSED
 
-                if order.side.name == "BUY":
+                if order.side == Direction.LONG:
 
                     order.pnl = (
                         exit_price -

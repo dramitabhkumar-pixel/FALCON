@@ -2,39 +2,74 @@
 =========================================================
 PROJECT FALCON
 Market Context Engine
-Version : 3.0
+Version : 3.1 (Frozen)
 =========================================================
 
-Updates the shared MarketContext using the latest
-IndicatorResult.
+Updates the shared MarketContext using IndicatorResult.
 
-Input
------
-MarketContext
-IndicatorResult
+Responsibilities
+----------------
+- Update Indicator State
+- Determine Trend
+- Determine Strength
+- Determine Bias
 
-Output
-------
-Updated MarketContext
+Produces an updated MarketContext for downstream
+analysis engines.
+
+Author : Amitabh Kumar + ChatGPT
+=========================================================
 """
 
 from __future__ import annotations
 
 from models.indicator_result import IndicatorResult
 from models.market_context import MarketContext
+
 from models.enums import (
+    Trend,
     Bias,
     Strength,
-    Trend,
 )
+
 from strategy.strategy_config import CONFIG
 
 
 class MarketContextEngine:
     """
-    Updates the shared MarketContext using the latest
-    calculated IndicatorResult.
+    Updates the shared MarketContext from the latest
+    IndicatorResult.
+
+    This engine performs no indicator calculations.
     """
+
+    # =====================================================
+    # Validation
+    # =====================================================
+
+    @staticmethod
+    def _validate(
+        context: MarketContext,
+        indicators: IndicatorResult,
+    ) -> None:
+        """
+        Validate engine inputs.
+        """
+
+        if context is None:
+            raise ValueError(
+                "MarketContext cannot be None."
+            )
+
+        if indicators is None:
+            raise ValueError(
+                "IndicatorResult cannot be None."
+            )
+
+        if not indicators.valid:
+            raise ValueError(
+                "IndicatorResult is invalid."
+            )
 
     # =====================================================
     # Trend
@@ -44,6 +79,10 @@ class MarketContextEngine:
     def _determine_trend(
         indicators: IndicatorResult,
     ) -> Trend:
+        
+        """
+        Determine overall market trend from EMA alignment.
+        """
 
         if indicators.ema_fast > indicators.ema_slow:
             return Trend.CONFIRMED_UPTREND
@@ -61,6 +100,9 @@ class MarketContextEngine:
     def _determine_strength(
         indicators: IndicatorResult,
     ) -> Strength:
+        """
+        Determine trend strength using ADX.
+        """
 
         if indicators.adx >= CONFIG.ADX_MINIMUM:
             return Strength.STRONG
@@ -76,6 +118,9 @@ class MarketContextEngine:
         trend: Trend,
         indicators: IndicatorResult,
     ) -> Bias:
+        """
+        Determine directional market bias.
+        """
 
         if (
             trend == Trend.CONFIRMED_UPTREND
@@ -100,13 +145,18 @@ class MarketContextEngine:
         context: MarketContext,
         indicators: IndicatorResult,
     ) -> None:
+        """
+        Copy indicator values into MarketContext.
+        """
 
-        context.indicators.ema_fast = indicators.ema_fast
-        context.indicators.ema_slow = indicators.ema_slow
-        context.indicators.rsi = indicators.rsi
-        context.indicators.adx = indicators.adx
-        context.indicators.atr = indicators.atr
-        context.indicators.volume = indicators.volume
+        state = context.indicators
+
+        state.ema_fast = indicators.ema_fast
+        state.ema_slow = indicators.ema_slow
+        state.rsi = indicators.rsi
+        state.adx = indicators.adx
+        state.atr = indicators.atr
+        state.volume = indicators.volume
 
     # =====================================================
     # Trend State
@@ -117,13 +167,16 @@ class MarketContextEngine:
         context: MarketContext,
         indicators: IndicatorResult,
     ) -> None:
+        """
+        Update trend-related information.
+        """
 
         trend = MarketContextEngine._determine_trend(
-            indicators,
+            indicators
         )
 
         strength = MarketContextEngine._determine_strength(
-            indicators,
+            indicators
         )
 
         bias = MarketContextEngine._determine_bias(
@@ -144,37 +197,54 @@ class MarketContextEngine:
         context: MarketContext,
         indicators: IndicatorResult,
     ) -> MarketContext:
-                if context is None:
-                 raise ValueError(
-                "MarketContext cannot be None."
-            )
+        
+            """
+        Update the shared MarketContext using the latest
+        IndicatorResult.
 
-                if indicators is None:
-                 raise ValueError(
-                "IndicatorResult cannot be None."
-            )
+        Parameters
+        ----------
+        context : MarketContext
+            Shared market state.
 
-                if not indicators.valid:
-                 raise ValueError(
-                "IndicatorResult is invalid."
-            )
+        indicators : IndicatorResult
+            Latest validated indicator calculations.
 
-        # =================================================
-        # Update Indicator State
-        # =================================================
+        Returns
+        -------
+        MarketContext
+            Updated market context.
+        """
 
-                self._update_indicator_state(
+        # =====================================================
+        # Validation
+        # =====================================================
+
+            self._validate(
             context,
             indicators,
         )
 
-        # =================================================
-        # Update Trend State
-        # =================================================
+        # =====================================================
+        # Indicator State
+        # =====================================================
 
-                self._update_trend_state(
+            self._update_indicator_state(
             context,
             indicators,
         )
 
-                return context
+        # =====================================================
+        # Trend State
+        # =====================================================
+
+            self._update_trend_state(
+            context,
+            indicators,
+        )
+
+        # =====================================================
+        # Return Updated Context
+        # =====================================================
+
+            return context

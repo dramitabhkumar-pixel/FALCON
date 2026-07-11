@@ -2,161 +2,140 @@
 =========================================================
 PROJECT FALCON
 Entry Engine
-Version : 2.0
+Version : 4.0
 =========================================================
 
-The Entry Engine is responsible for converting a
-validated market setup into an executable trade.
+Converts a validated TradeSetup and ConfidenceResult
+into a TradeDecision.
 
-Inputs
-------
-TradeSetup
-ConfidenceResult
+Responsibilities
+----------------
+• Validate inputs
+• Calculate stop loss
+• Calculate target
+• Calculate risk/reward
+• Build TradeDecision
 
-Output
-------
-TradeDecision
-
-This engine performs NO market analysis.
+This engine performs NO market analysis,
+NO trade management and NO exit logic.
+=========================================================
 """
 
-from core.base_engine import BaseEngine
+from __future__ import annotations
+
+
+from uuid import uuid4
 
 from config.strategy_config import CONFIG
 
+from core.candles import Candle
 from models.trade_setup import TradeSetup
 from models.trade_decision import TradeDecision
 from models.confidence_result import ConfidenceResult
-from models.enums import Direction
+
+from models.enums import (
+    Direction,
+    TradeStatus,
+)
 
 
-class EntryEngine(BaseEngine):
+class EntryEngine:
     """
-    Converts analysis results into
-    a final TradeDecision.
+    Produces a TradeDecision from a validated
+    TradeSetup and ConfidenceResult.
     """
 
-    def run(
+    # =====================================================
+    # Validation
+    # =====================================================
+
+    @staticmethod
+    def _validate(
+        setup: TradeSetup,
+        confidence: ConfidenceResult,
+    ) -> None:
+        """
+        Validate engine inputs.
+        """
+
+        if setup is None:
+            raise ValueError(
+                "TradeSetup cannot be None."
+            )
+
+        if confidence is None:
+            raise ValueError(
+                "ConfidenceResult cannot be None."
+            )
+
+    # =====================================================
+    # Public API
+    # =====================================================
+
+    def evaluate(
         self,
         setup: TradeSetup,
         confidence: ConfidenceResult,
+        candle: Candle,
+        symbol: str = "",
     ) -> TradeDecision:
+        """
+        Create a TradeDecision from validated
+        analysis results.
+        """
+
+        self._validate(
+            setup,
+            confidence,
+        )
 
         decision = TradeDecision()
 
-        # ==============================================
-        # Validate Inputs
-        # ==============================================
-
-        if setup is None:
-
-            decision.reasons.append(
-                "Trade setup is missing."
-            )
-
-            return decision
-
-        if confidence is None:
-
-            decision.reasons.append(
-                "Confidence result is missing."
-            )
-
-            return decision
+        # -------------------------------------------------
+        # Business Validation
+        # -------------------------------------------------
 
         if not setup.valid:
-
-            decision.reasons.append(
-                "Trade setup is invalid."
-            )
-
             return decision
 
         if not confidence.valid:
-
-            decision.reasons.append(
-                "Confidence result is invalid."
-            )
-
             return decision
 
         if not confidence.minimum_confidence_met:
-
-            decision.reasons.append(
-                "Minimum confidence not satisfied."
-            )
-
             return decision
 
         if setup.direction not in (
             Direction.LONG,
             Direction.SHORT,
         ):
-
-            decision.reasons.append(
-                "Invalid trade direction."
-            )
-
             return decision
 
-        # ==============================================
-        # Populate Initial Decision
-        # ==============================================
+        # -------------------------------------------------
+        # Calculate Levels
+        # -------------------------------------------------
 
-        decision.direction = setup.direction
+        entry_price = setup.current_price
 
-        decision.confidence_score = (
-            confidence.confidence_score
+        stop_loss = self._calculate_stop_loss(
+            setup,
         )
 
-        entry = setup.current_price
-        # ==============================================
-        # Calculate Stop Loss
-        # ==============================================
-
-        if setup.direction == Direction.LONG:
-
-            stop_loss = (
-                setup.swing_low
-                - (setup.atr * CONFIG.ATR_BUFFER)
-            )
-
-        else:
-
-            stop_loss = (
-                setup.swing_high
-                + (setup.atr * CONFIG.ATR_BUFFER)
-            )
-
-        risk = abs(entry - stop_loss)
+        risk = abs(
+            entry_price - stop_loss
+        )
 
         if risk <= 0:
-
-            decision.reasons.append(
-                "Invalid trade risk."
-            )
-
             return decision
 
-        # ==============================================
-        # Calculate Target
-        # ==============================================
+        target = self._calculate_target(
+            direction=setup.direction,
+            entry_price=entry_price,
+            risk=risk,
+        )
 
-        if setup.direction == Direction.LONG:
-
-            target = (
-                entry
-                + (risk * CONFIG.REWARD_RATIO)
-            )
-
-        else:
-
-            target = (
-                entry
-                - (risk * CONFIG.REWARD_RATIO)
-            )
-
-        reward = abs(target - entry)
+        reward = abs(
+            target - entry_price
+        )
 
         risk_reward = round(
             reward / risk,
@@ -167,36 +146,148 @@ class EntryEngine(BaseEngine):
             risk_reward
             < CONFIG.MINIMUM_RR
         ):
-
-            decision.reasons.append(
-                "Risk reward below minimum."
-            )
-
             return decision
 
-        # ==============================================
+        # -------------------------------------------------
         # Populate Decision
-        # ==============================================
+        # -------------------------------------------------
 
-        decision.entry_price = round(entry, 2)
+        decision.trade_id = str(
+            uuid4()
+        )
 
-        decision.stop_loss = round(stop_loss, 2)
+        decision.symbol = symbol
 
-        decision.target_price = round(target, 2)
+        decision.direction = (
+            setup.direction
+        )
+
+        decision.quantity = (
+            CONFIG.POSITION_SIZE
+        )
+
+        decision.entry_price = round(
+            entry_price,
+            2,
+        )
+
+        decision.entry_time = candle.timestamp
+
+        decision.stop_loss = round(
+            stop_loss,
+            2,
+        )
+
+        decision.target = round(
+            target,
+            2,
+        )
 
         decision.risk_reward = risk_reward
 
-        decision.quantity = (
-            CONFIG.MINIMUM_POSITION_SIZE
+        decision.confidence_score = (
+            confidence.confidence_score
         )
-        # ==============================================
-        # Final Validation
-        # ==============================================
 
-        decision.valid = True
+        decision.confidence_grade = (
+            confidence.grade
+        )
 
-        decision.reasons.append(
-            "Trade approved."
+        decision.trend = setup.trend
+
+        decision.structure = (
+            setup.structure
+        )
+
+        decision.confluence = (
+            confidence.confidence_score
+        )
+
+        decision.status = (
+            TradeStatus.ACTIVE
         )
 
         return decision
+
+    # =====================================================
+    # Stop Loss
+    # =====================================================
+
+    def _calculate_stop_loss(
+        self,
+        setup: TradeSetup,
+    ) -> float:
+        """
+        Calculate initial stop loss.
+        """
+
+        if setup.direction == Direction.LONG:
+
+            return (
+                setup.swing_low
+                - (
+                    setup.atr
+                    * CONFIG.ATR_MULTIPLIER
+                )
+            )
+
+        return (
+            setup.swing_high
+            + (
+                setup.atr
+                * CONFIG.ATR_MULTIPLIER
+            )
+        )
+        # =====================================================
+    # Target
+    # =====================================================
+
+    def _calculate_target(
+        self,
+        direction: Direction,
+        entry_price: float,
+        risk: float,
+    ) -> float:
+        """
+        Calculate profit target from the configured
+        risk-reward ratio.
+        """
+
+        if direction == Direction.LONG:
+
+            return (
+                entry_price
+                + (
+                    risk
+                    * CONFIG.REWARD_RATIO
+                )
+            )
+
+        return (
+            entry_price
+            - (
+                risk
+                * CONFIG.REWARD_RATIO
+            )
+        )
+
+    # =====================================================
+    # Callable Interface
+    # =====================================================
+
+    def __call__(
+        self,
+        setup: TradeSetup,
+        confidence: ConfidenceResult,
+        symbol: str = "",
+    ) -> TradeDecision:
+        """
+        Callable interface.
+        """
+
+        return self.evaluate(
+           setup=setup,
+           confidence=confidence,
+           candle=Candle,
+           symbol=symbol,
+    )

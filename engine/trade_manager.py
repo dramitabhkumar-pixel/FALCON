@@ -7,7 +7,7 @@ Version : 1.0
 """
 
 from core.base_engine import BaseEngine
-from enums import OrderStatus
+from models.enums import Direction
 
 
 class TradeManager(BaseEngine):
@@ -37,10 +37,10 @@ class TradeManager(BaseEngine):
         current_price: float,
     ) -> bool:
 
-        if order.status != OrderStatus.FILLED:
+        if order.status != Direction.FILLED:
             return False
 
-        if order.side.name == "BUY":
+        if order.side.name == "LONG":
             return current_price <= order.stop_loss
 
         return current_price >= order.stop_loss
@@ -53,10 +53,10 @@ class TradeManager(BaseEngine):
         current_price: float,
     ) -> bool:
 
-        if order.status != OrderStatus.FILLED:
+        if order.status != Direction.FILLED:
             return False
 
-        if order.side.name == "BUY":
+        if order.side.name == "LONG":
             return current_price >= order.target
 
         return current_price <= order.target
@@ -68,7 +68,7 @@ class TradeManager(BaseEngine):
         order,
     ):
 
-        if order.status != OrderStatus.FILLED:
+        if order.status != Direction.FILLED:
             return
 
         if order.filled_price is None:
@@ -88,10 +88,10 @@ class TradeManager(BaseEngine):
         new_stop_loss: float,
     ):
 
-        if order.status != OrderStatus.FILLED:
+        if order.status != Direction.FILLED:
             return
 
-        if order.side.name == "BUY":
+        if order.side.name == "LONG":
 
             if new_stop_loss > order.stop_loss:
 
@@ -122,7 +122,7 @@ class TradeManager(BaseEngine):
         if order.filled_price is None:
             return 0.0
 
-        if order.side.name == "BUY":
+        if order.side.name == "LONG":
 
             pnl = (
                 exit_price
@@ -147,7 +147,7 @@ class TradeManager(BaseEngine):
         remarks: str,
     ):
 
-        if order.status != OrderStatus.FILLED:
+        if order.status != Direction.FILLED:
             return
 
         order.exit_price = exit_price
@@ -157,7 +157,7 @@ class TradeManager(BaseEngine):
             exit_price,
         )
 
-        order.status = OrderStatus.EXITED
+        order.status = Direction.EXITED
 
         order.remarks = remarks
 

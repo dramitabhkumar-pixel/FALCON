@@ -1,54 +1,87 @@
+"""
+=========================================================
+PROJECT FALCON
+Strategy Engine Test
+Version : 1.0
+=========================================================
+"""
+
 from models.trade_setup import TradeSetup
+from models.enums import (
+    Trend,
+    Bias,
+    Strength,
+    Structure,
+    Direction,
+)
 
 from strategy.strategy_engine import StrategyEngine
 
 
-setup = TradeSetup(
+def test_strategy_engine():
 
-    trend="UP",
+    setup = TradeSetup(
 
-    structure="BULLISH",
+        trend=Trend.CONFIRMED_UPTREND,
 
-    ema_alignment=True,
+        bias=Bias.BULLISH,
 
-    bos=True,
+        strength=Strength.STRONG,
 
-    golden_zone=True,
+        structure=Structure.BULLISH,
 
-    liquidity=True,
+        ema_fast=105,
 
-    rsi=65,
+        ema_slow=100,
 
-    adx=30,
+        ema_alignment=True,
 
-    volume=1500,
+        rsi=65,
 
-    market_context="TRENDING",
+        adx=30,
 
-    confluence=90,
+        atr=12,
 
-    entry_price=100,
+        high_volatility=True,
 
-    stop_loss=95,
+        volume=1500,
 
-    target_price=115,
+        liquidity=True,
 
-)
+        fibonacci=True,
 
-engine = StrategyEngine()
+        golden_zone=True,
 
-decision = engine.process(setup)
+        bos=True,
 
-print()
+        choch=False,
 
-if decision is None:
+        equal_highs=False,
 
-    print("Trade Rejected")
+        equal_lows=False,
 
-else:
+        order_block=True,
 
-    print("Trade Accepted")
+        fair_value_gap=True,
 
-    print()
+        direction=Direction.LONG,
 
-    print(decision)
+        valid=True,
+
+        swing_high=110,
+
+        swing_low=95,
+
+        golden_zone_low=100,
+
+        golden_zone_high=104,
+
+        current_price=102,
+
+    )
+
+    engine = StrategyEngine()
+
+    decision = engine.process(setup)
+
+    assert decision is not None

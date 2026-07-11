@@ -2,10 +2,16 @@
 =========================================================
 PROJECT FALCON
 Swing Fibonacci Model
+Version : 2.0
 =========================================================
+
+Represents the Fibonacci retracement of the latest
+validated market impulse.
 """
 
 from dataclasses import dataclass
+
+from models.enums import FibonacciDirection
 
 
 @dataclass(slots=True)
@@ -15,20 +21,46 @@ class SwingFibonacci:
     completed market impulse.
     """
 
-    direction: str
+    # =====================================================
+    # Direction
+    # =====================================================
 
-    swing_high: float
-    swing_low: float
+    direction: FibonacciDirection = FibonacciDirection.NONE
 
-    range_points: float
+    # =====================================================
+    # Swing
+    # =====================================================
 
-    fib_236: float
-    fib_382: float
-    fib_500: float
-    fib_618: float
-    fib_786: float
+    swing_high: float = 0.0
 
-    golden_upper: float
-    golden_lower: float
+    swing_low: float = 0.0
 
-    pullback_valid: bool
+    range_points: float = 0.0
+
+    # =====================================================
+    # Fibonacci Levels
+    # =====================================================
+
+    fib_236: float = 0.0
+
+    fib_382: float = 0.0
+
+    fib_500: float = 0.0
+
+    fib_618: float = 0.0
+
+    fib_786: float = 0.0
+
+    # =====================================================
+    # Golden Zone
+    # =====================================================
+
+    golden_upper: float = 0.0
+
+    golden_lower: float = 0.0
+
+    # =====================================================
+    # Pullback Validation
+    # =====================================================
+
+    pullback_valid: bool = False

@@ -2,162 +2,130 @@
 =========================================================
 PROJECT FALCON
 Trade Manager
+Version : 1.0
 =========================================================
 
-Manages complete lifecycle of a trade.
+Manages the lifecycle of all trades.
+
+Responsibilities
+----------------
+- Register new trades
+- Track active trades
+- Update active trades
+- Move closed trades
+- Maintain trade history
+
+This engine performs NO market analysis.
 """
 
-from core.trade_state import TradeState
+from core.base_engine import BaseEngine
+
+from strategy.exit_engine import ExitEngine
+
 from models.trade_decision import TradeDecision
+from models.enums import TradeStatus
 
 
-class TradeManager:
+class TradeManager(BaseEngine):
+    """
+    Maintains active and completed trades.
+    """
 
     def __init__(self):
 
-        self.reset()
+        self.exit_engine = ExitEngine()
 
-    # =========================================================
+        self.active_trades = []
 
-    def reset(self):
+        self.closed_trades = []
 
-        self.trade = None
+    # =====================================================
+    # Open Trade
+    # =====================================================
 
-        self.state = TradeState.WAITING
+    def open_trade(
+        self,
+        trade: TradeDecision,
+    ) -> bool:
 
-        self.current_price = 0.0
+        if trade is None:
 
-        self.realized_pnl = 0.0
+            return False
 
-        self.unrealized_pnl = 0.0
+        if not trade.valid:
 
-    # =========================================================
+            return False
 
-    def load_trade(self, trade: TradeDecision):
+        trade.status = TradeStatus.PENDING
 
-        self.trade = trade
+        self.active_trades.append(trade)
 
-        if trade.valid:
+        return True
+    # =====================================================
+    # Update Active Trades
+    # =====================================================
 
-            self.state = TradeState.READY
+    def update(
+        self,
+        current_price: float,
+    ) -> None:
+        """
+        Updates all active trades using the Exit Engine.
+        """
 
-        else:
+        remaining_trades = []
 
-            self.state = TradeState.CANCELLED
+        for trade in self.active_trades:
 
-    # =========================================================
-
-    def open_trade(self):
-
-        if self.state == TradeState.READY:
-
-            self.state = TradeState.OPEN
-
-    # =========================================================
-
-    def update_price(self, price: float):
-
-        self.current_price = price
-
-        if self.trade is None:
-
-            return
-
-        if self.state not in (
-            TradeState.OPEN,
-            TradeState.BREAKEVEN,
-            TradeState.TRAILING,
-            TradeState.PARTIAL_EXIT,
-        ):
-            return
-
-        if self.trade.signal == "BUY":
-
-            self.unrealized_pnl = (
-                price - self.trade.entry_price
+            updated_trade = self.exit_engine.run(
+                trade,
+                current_price,
             )
 
-        elif self.trade.signal == "SELL":
+            if updated_trade.status == TradeStatus.CLOSED:
 
-            self.unrealized_pnl = (
-                self.trade.entry_price - price
-            )
+                self.closed_trades.append(
+                    updated_trade
+                )
 
-    # =========================================================
+            else:
 
-    def move_to_breakeven(self):
+                remaining_trades.append(
+                    updated_trade
+                )
 
-        if self.state == TradeState.OPEN:
+        self.active_trades = remaining_trades
+    # =====================================================
+    # Get Active Trades
+    # =====================================================
 
-            self.trade.stop_loss = self.trade.entry_price
+    def get_active_trades(self) -> list[TradeDecision]:
 
-            self.state = TradeState.BREAKEVEN
+        return self.active_trades
 
-    # =========================================================
+    # =====================================================
+    # Get Closed Trades
+    # =====================================================
 
-    def trail_stop(self, new_stop):
+    def get_closed_trades(self) -> list[TradeDecision]:
 
-        if self.state in (
-            TradeState.OPEN,
-            TradeState.BREAKEVEN,
-            TradeState.TRAILING,
-        ):
+        return self.closed_trades
 
-            self.trade.stop_loss = new_stop
+    # =====================================================
+    # Statistics
+    # =====================================================
 
-            self.state = TradeState.TRAILING
+    def active_count(self) -> int:
 
-    # =========================================================
+        return len(self.active_trades)
 
-    def partial_exit(self):
+    def closed_count(self) -> int:
 
-        if self.state in (
-            TradeState.OPEN,
-            TradeState.BREAKEVEN,
-            TradeState.TRAILING,
-        ):
+        return len(self.closed_trades)
 
-            self.state = TradeState.PARTIAL_EXIT
+    def total_trades(self) -> int:
 
-    # =========================================================
-
-    def target_hit(self):
-
-        self.realized_pnl = self.unrealized_pnl
-
-        self.state = TradeState.TARGET_HIT
-
-    # =========================================================
-
-    def stop_loss_hit(self):
-
-        self.realized_pnl = self.unrealized_pnl
-
-        self.state = TradeState.STOP_LOSS
-
-    # =========================================================
-
-    def close_trade(self):
-
-        self.state = TradeState.CLOSED
-
-    # =========================================================
-
-    def summary(self):
-
-        return {
-
-            "state": self.state.value,
-
-            "entry": self.trade.entry_price if self.trade else None,
-
-            "stop_loss": self.trade.stop_loss if self.trade else None,
-
-            "target": self.trade.target_price if self.trade else None,
-
-            "current_price": self.current_price,
-
-            "unrealized_pnl": round(self.unrealized_pnl, 2),
-
-            "realized_pnl": round(self.realized_pnl, 2),
-        }
+        return (
+            self.active_count()
+            + self.closed_count()
+        )

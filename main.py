@@ -10,7 +10,7 @@ Main Entry Point
 from engine.risk_manager import RiskManager
 from engine.execution_engine import ExecutionEngine
 
-from enums import OrderSide
+from models.enums import Direction
 
 
 def main():
@@ -34,7 +34,7 @@ def main():
 
     symbol = "BANKNIFTY"
 
-    side = OrderSide.BUY
+    side = Direction.LONG
 
     entry = 51000
 

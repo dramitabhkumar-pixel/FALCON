@@ -1,74 +1,97 @@
-from models.trade_decision import TradeDecision
+"""
+=========================================================
+PROJECT FALCON
+Trade Manager Tests
+=========================================================
+"""
 
 from strategy.trade_manager import TradeManager
 
+from models.trade_decision import TradeDecision
 
-trade = TradeDecision(
-
-    valid=True,
-
-    signal="BUY",
-
-    entry_price=100,
-
-    stop_loss=95,
-
-    target_price=115,
-
+from models.enums import (
+    Direction,
+    TradeStatus,
 )
 
-manager = TradeManager()
 
-print("\nInitial")
+def create_trade():
 
-print(manager.summary())
+    return TradeDecision(
+        valid=True,
+        direction=Direction.LONG,
+        entry_price=100.0,
+        stop_loss=95.0,
+        target_price=110.0,
+        quantity=10,
+        status=TradeStatus.PENDING,
+    )
 
-manager.load_trade(trade)
 
-print("\nLoaded")
+def test_open_trade():
 
-print(manager.summary())
+    manager = TradeManager()
 
-manager.open_trade()
+    trade = create_trade()
 
-manager.update_price(104)
+    assert manager.open_trade(trade)
 
-print("\nPrice = 104")
+    assert manager.active_count() == 1
 
-print(manager.summary())
+    assert manager.closed_count() == 0
 
-manager.move_to_breakeven()
 
-print("\nBreakeven")
+def test_trade_remains_active():
 
-print(manager.summary())
+    manager = TradeManager()
 
-manager.trail_stop(103)
+    trade = create_trade()
 
-print("\nTrailing")
+    manager.open_trade(trade)
 
-print(manager.summary())
+    manager.update(103.0)
 
-manager.update_price(110)
+    assert manager.active_count() == 1
 
-print("\nPrice = 110")
+    assert manager.closed_count() == 0
 
-print(manager.summary())
 
-manager.partial_exit()
+def test_trade_hits_target():
 
-print("\nPartial Exit")
+    manager = TradeManager()
 
-print(manager.summary())
+    trade = create_trade()
 
-manager.target_hit()
+    manager.open_trade(trade)
 
-print("\nTarget Hit")
+    manager.update(111.0)
 
-print(manager.summary())
+    assert manager.active_count() == 0
 
-manager.close_trade()
+    assert manager.closed_count() == 1
 
-print("\nClosed")
 
-print(manager.summary())
+def test_trade_hits_stoploss():
+
+    manager = TradeManager()
+
+    trade = create_trade()
+
+    manager.open_trade(trade)
+
+    manager.update(94.0)
+
+    assert manager.active_count() == 0
+
+    assert manager.closed_count() == 1
+
+
+def test_invalid_trade():
+
+    manager = TradeManager()
+
+    trade = TradeDecision()
+
+    assert manager.open_trade(trade) is False
+
+    assert manager.active_count() == 0

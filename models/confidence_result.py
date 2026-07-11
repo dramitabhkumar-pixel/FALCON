@@ -2,7 +2,7 @@
 =========================================================
 PROJECT FALCON
 Confidence Result Model
-Version : 1.0
+Version : 2.0
 =========================================================
 
 Represents the output of the Confidence Engine.
@@ -14,16 +14,13 @@ No business logic belongs here.
 from dataclasses import dataclass, field
 from typing import List
 
+from models.enums import ConfidenceGrade
+
 
 @dataclass(slots=True)
 class ConfidenceResult:
     """
     Result produced by the Confidence Engine.
-
-    This model represents the overall confidence
-    score derived from the ConfluenceResult.
-
-    It does NOT make trading decisions.
     """
 
     # =====================================================
@@ -32,7 +29,7 @@ class ConfidenceResult:
 
     confidence_score: int = 0
 
-    grade: str = "D"
+    grade: ConfidenceGrade = ConfidenceGrade.D
 
     minimum_confidence_met: bool = False
 

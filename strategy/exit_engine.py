@@ -1,173 +1,210 @@
 """
-=========================================================
+==========================================================
 PROJECT FALCON
 Exit Engine
-Version : 1.0
-=========================================================
+Version : 4.0
+==========================================================
 
-The Exit Engine monitors an active trade and
-determines whether the trade should remain active
-or be closed.
+Evaluates whether an ACTIVE trade should be exited.
 
-Inputs
-------
-TradeDecision
-Current Market Price
+Responsibilities
+----------------
+• Stop Loss
+• Target
+• Opposite Signal
+• Time Exit
+• Market Close
 
-Output
-------
-Updated TradeDecision
+This engine NEVER modifies a TradeDecision.
 
-This engine performs NO market analysis.
+Instead, it returns an ExitDecision which is
+applied by the TradeManager.
+
+Author : Amitabh Kumar + ChatGPT
+==========================================================
 """
 
+from __future__ import annotations
+
+from datetime import datetime
+
 from core.base_engine import BaseEngine
+from core.candles import Candle
 
 from models.trade_decision import TradeDecision
+from models.exit_decision import ExitDecision
 
 from models.enums import (
     Direction,
-    TradeStatus,
     ExitReason,
+    TradeStatus,
+)
+
+from strategy.strategy_config import (
+    FORCED_EXIT_TIME,
 )
 
 
 class ExitEngine(BaseEngine):
     """
-    Handles trade exits.
+    Evaluates whether an active trade should exit.
+
+    This engine is completely stateless.
+
+    Input:
+        TradeDecision
+        Candle
+
+    Output:
+        ExitDecision
     """
 
-    def run(
+    def __init__(self):
+
+        super().__init__()
+
+    # =====================================================
+    # Public API
+    # =====================================================
+
+    def evaluate_exit(
         self,
         trade: TradeDecision,
-        current_price: float,
-    ) -> TradeDecision:
+        candle: Candle,
+        opposite_signal: bool = False,
+    ) -> ExitDecision:
+        """
+        Evaluate all exit conditions.
 
-        # ==================================================
-        # Validation
-        # ==================================================
+        Parameters
+        ----------
+        trade
+            Current active trade.
 
-        if trade is None:
+        candle
+            Current market candle.
 
-            return TradeDecision()
+        opposite_signal
+            True if strategy generated
+            an opposite signal.
 
-        if not trade.valid:
+        Returns
+        -------
+        ExitDecision
+        """
 
-            return trade
+        if trade.status != TradeStatus.ACTIVE:
 
-        if trade.status == TradeStatus.CLOSED:
+            return ExitDecision()
 
-            return trade
+        decision = self._check_stop_loss(
+            trade,
+            candle,
+        )
 
-        if current_price <= 0:
+        if decision.should_exit:
+            return decision
 
-            trade.reasons.append(
-                "Invalid market price."
-            )
+        decision = self._check_target(
+            trade,
+            candle,
+        )
 
-            return trade
+        if decision.should_exit:
+            return decision
 
-        # ==================================================
-        # Trade becomes Active
-        # ==================================================
+        decision = self._check_opposite_signal(
+            trade,
+            candle,
+            opposite_signal,
+        )
 
-        if trade.status == TradeStatus.PENDING:
+        if decision.should_exit:
+            return decision
 
-            trade.status = TradeStatus.ACTIVE
+        decision = self._check_time_exit(
+            trade,
+            candle,
+        )
 
-                # ==================================================
-        # LONG Position
-        # ==================================================
+        if decision.should_exit:
+            return decision
+
+        return self._check_market_close(
+            trade,
+            candle,
+        )
+
+    # =====================================================
+    # Stop Loss
+    # =====================================================
+
+    def _check_stop_loss(
+        self,
+        trade: TradeDecision,
+        candle: Candle,
+    ) -> ExitDecision:
+        """
+        Evaluate stop-loss exit.
+        """
 
         if trade.direction == Direction.LONG:
 
-            if current_price <= trade.stop_loss:
+            if candle.low <= trade.stop_loss:
 
-                trade.status = TradeStatus.CLOSED
-
-                trade.exit_reason = ExitReason.STOPLOSS
-
-                trade.exit_price = current_price
-
-                trade.pnl = (
-                    (current_price - trade.entry_price)
-                    * trade.quantity
+                return self._build_exit_decision(
+                    exit_reason=ExitReason.STOPLOSS,
+                    exit_price=trade.stop_loss,
+                    exit_time=candle.timestamp,
+                    message="Long stop-loss hit.",
                 )
-
-                trade.reasons.append(
-                    "Stop Loss hit."
-                )
-
-                return trade
-
-            if current_price >= trade.target_price:
-
-                trade.status = TradeStatus.CLOSED
-
-                trade.exit_reason = ExitReason.TARGET
-
-                trade.exit_price = current_price
-
-                trade.pnl = (
-                    (current_price - trade.entry_price)
-                    * trade.quantity
-                )
-
-                trade.reasons.append(
-                    "Target achieved."
-                )
-
-                return trade
-
-        # ==================================================
-        # SHORT Position
-        # ==================================================
 
         elif trade.direction == Direction.SHORT:
 
-            if current_price >= trade.stop_loss:
+            if candle.high >= trade.stop_loss:
 
-                trade.status = TradeStatus.CLOSED
-
-                trade.exit_reason = ExitReason.STOPLOSS
-
-                trade.exit_price = current_price
-
-                trade.pnl = (
-                    (trade.entry_price - current_price)
-                    * trade.quantity
+                return self._build_exit_decision(
+                    exit_reason=ExitReason.STOPLOSS,
+                    exit_price=trade.stop_loss,
+                    exit_time=candle.timestamp,
+                    message="Short stop-loss hit.",
                 )
 
-                trade.reasons.append(
-                    "Stop Loss hit."
+        return ExitDecision()
+
+    # =====================================================
+    # Target
+    # =====================================================
+
+    def _check_target(
+        self,
+        trade: TradeDecision,
+        candle: Candle,
+    ) -> ExitDecision:
+        """
+        Evaluate target exit.
+        """
+
+        if trade.direction == Direction.LONG:
+
+            if candle.high >= trade.target:
+
+                return self._build_exit_decision(
+                    exit_reason=ExitReason.TARGET,
+                    exit_price=trade.target,
+                    exit_time=candle.timestamp,
+                    message="Long target achieved.",
                 )
 
-                return trade
+        elif trade.direction == Direction.SHORT:
 
-            if current_price <= trade.target_price:
+            if candle.low <= trade.target:
 
-                trade.status = TradeStatus.CLOSED
-
-                trade.exit_reason = ExitReason.TARGET
-
-                trade.exit_price = current_price
-
-                trade.pnl = (
-                    (trade.entry_price - current_price)
-                    * trade.quantity
+                return self._build_exit_decision(
+                    exit_reason=ExitReason.TARGET,
+                    exit_price=trade.target,
+                    exit_time=candle.timestamp,
+                    message="Short target achieved.",
                 )
 
-                trade.reasons.append(
-                    "Target achieved."
-                )
-
-                return trade
-        # ==================================================
-        # Trade Continues
-        # ==================================================
-
-        trade.reasons.append(
-            "Trade remains active."
-        )
-
-        return trade
+        return ExitDecision()

@@ -27,7 +27,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from enums import OrderSide
+from models.enums import Direction
 
 from config.strategy_config import StrategyConfig
 
@@ -49,7 +49,7 @@ class RunnerDecision:
     Returned to BacktestEngine.
     """
 
-    side: OrderSide
+    side: Direction
 
     entry: float
 
@@ -278,22 +278,23 @@ class StrategyRunner:
             # Convert Signal
             # ------------------------------------------
 
-            signal = str(
-                decision.signal
-            ).upper()
+            from models.enums import Direction
 
-            if signal == "BUY":
+            # ------------------------------------------
+            # Convert Direction
+            # ------------------------------------------
 
-                side = OrderSide.BUY
+            if decision.direction == Direction.LONG:
 
-            elif signal == "SELL":
+               side = Direction.LONG
 
-                side = OrderSide.SELL
+            elif decision.direction == Direction.SHORT:
+
+             side = Direction.SHORT
 
             else:
 
-                return None
-
+             return None
             # ------------------------------------------
             # Return to Backtest Engine
             # ------------------------------------------
@@ -315,7 +316,7 @@ class StrategyRunner:
                 ),
 
                 confidence=float(
-                    decision.confidence
+                    decision.confidence_score
                 ),
             )
 

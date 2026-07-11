@@ -32,7 +32,7 @@ from models.trade_setup import TradeSetup
 
 from engine.market_context_engine import MarketContextEngine
 from engine.structure_engine import StructureEngine
-from engine.confluence_engine import ConfluenceEngine
+from strategy.confluence_engine import ConfluenceEngine
 from engine.swing_engine import SwingEngine
 from engine.swing_fibonacci_engine import SwingFibonacciEngine
 
@@ -140,28 +140,20 @@ class SetupBuilder:
 
         setup.ema_alignment = ema_fast > ema_slow
 
-        # -------------------------------------------------
-        # Market Context
-        # -------------------------------------------------
+       # -------------------------------------------------
+       # Market Context
+       # -------------------------------------------------
 
         context = self.market_context_engine.analyze(
+        ema_fast=ema_fast,
+        ema_slow=ema_slow,
+        rsi=rsi,
+        atr=atr,
+)
 
-            adx=adx,
-
-            ema_fast=ema_fast,
-
-            ema_slow=ema_slow,
-
-            rsi=rsi,
-
-            atr=atr,
-
-            avg_atr=avg_atr,
-
-        )
-
-        setup.market_context = context.trend
         setup.trend = context.trend
+        setup.bias = context.bias
+        setup.strength = context.strength
 
         # -------------------------------------------------
         # Swing Engine
@@ -496,3 +488,4 @@ class SetupBuilder:
         )
 
         return setup
+        

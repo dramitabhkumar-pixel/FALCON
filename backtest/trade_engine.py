@@ -4,8 +4,10 @@ Simulated order execution for backtests.
 
 from __future__ import annotations
 
-from enums import OrderSide, OrderStatus
-
+from models.enums import (
+    Direction,
+    TradeStatus,
+)
 from engine.execution_engine import ExecutionEngine
 
 from backtest.trade_history import TradeHistory
@@ -37,7 +39,7 @@ class BacktestTradeEngine:
 
     def try_entry(
         self,
-        side: OrderSide,
+        side: Direction,
         entry: float,
         stop_loss: float,
         target: float,
@@ -75,7 +77,7 @@ class BacktestTradeEngine:
 
         for order in list(self.open_orders):
 
-            if order.status != OrderStatus.FILLED:
+            if order.status != TradeStatus.ACTIVE:
                 continue
 
             exit_price = self._resolve_exit(order, bar)
@@ -117,7 +119,7 @@ class BacktestTradeEngine:
         # BUY Position
         # -------------------------------
 
-        if order.side == OrderSide.BUY:
+        if order.side == Direction.LONG:
 
             stop_hit = low <= order.stop_loss
             target_hit = high >= order.target

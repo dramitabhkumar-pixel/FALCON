@@ -11,6 +11,8 @@ entire trading system without modifying engine code.
 """
 
 from dataclasses import dataclass
+from dataclasses import dataclass
+from datetime import time
 
 
 @dataclass(frozen=True)
@@ -69,6 +71,12 @@ class StrategyConfig:
 
     MINIMUM_RR = 2.0
 
+    REWARD_RATIO = 2.0
+
+    ATR_MULTIPLIER = 1.5
+
+    POSITION_SIZE = 1
+
     MAX_RISK_PER_TRADE = 1.0      # %
 
     MAX_OPEN_TRADES = 1
@@ -106,18 +114,18 @@ class StrategyConfig:
     # TRADING SESSION
     # =====================================================
 
-    MARKET_OPEN = "09:15"
+    MARKET_OPEN = time(9, 15)
 
-    ENTRY_START = "09:30"
+    ENTRY_START = time(9, 45)
 
-    ENTRY_END = "15:00"
+    ENTRY_END = time(15, 0)
 
-    MARKET_CLOSE = "15:30"
+    FORCED_EXIT = time(15, 15)
 
+    MARKET_CLOSE = time(15, 30)
     # =====================================================
     # BACKTEST
     # =====================================================
-
     INITIAL_CAPITAL = 1_000_000
 
     SLIPPAGE = 0.0005
@@ -128,11 +136,11 @@ class StrategyConfig:
     # LOGGING
     # =====================================================
 
-    ENABLE_LOGGING = True
+ENABLE_LOGGING = True
 
-    ENABLE_DEBUG = False
+ENABLE_DEBUG = False
 
-    SAVE_TRADE_LOG = True
+SAVE_TRADE_LOG = True
 
 
 # ==========================================================
