@@ -111,3 +111,16 @@ class TradeSetup:
     # =====================================================
 
     valid: bool = False
+
+    # =====================================================
+    # Execution Inputs
+    # =====================================================
+
+    swing_high: float = 0.0
+
+    swing_low: float = 0.0
+
+    golden_zone_low: float = 0.0
+
+    golden_zone_high: float = 0.0
+    current_price: float = 0.0

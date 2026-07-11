@@ -1,2 +1,3 @@
 order_id,symbol,side,entry_price,exit_price,quantity,stop_loss,target,pnl,status,entry_time,exit_time,remarks
 1,BANKNIFTY,BUY,51000,51220,100,50950,51200,22000,EXITED
+1,BANKNIFTY,BUY,51000,51220,100,50950,51200,22000,EXITED

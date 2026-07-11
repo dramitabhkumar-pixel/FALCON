@@ -2,87 +2,201 @@
 =========================================================
 PROJECT FALCON
 Entry Engine
+Version : 2.0
 =========================================================
 
-Converts a validated TradeSetup into a TradeDecision.
+The Entry Engine is responsible for converting a
+validated market setup into an executable trade.
+
+Inputs
+------
+TradeSetup
+ConfidenceResult
+
+Output
+------
+TradeDecision
+
+This engine performs NO market analysis.
 """
+
+from core.base_engine import BaseEngine
+
+from config.strategy_config import CONFIG
 
 from models.trade_setup import TradeSetup
 from models.trade_decision import TradeDecision
+from models.confidence_result import ConfidenceResult
+from models.enums import Direction
 
 
-class EntryEngine:
+class EntryEngine(BaseEngine):
+    """
+    Converts analysis results into
+    a final TradeDecision.
+    """
 
-    MIN_RISK_REWARD = 2.5
-
-    def evaluate(self, setup: TradeSetup) -> TradeDecision:
+    def run(
+        self,
+        setup: TradeSetup,
+        confidence: ConfidenceResult,
+    ) -> TradeDecision:
 
         decision = TradeDecision()
 
+        # ==============================================
+        # Validate Inputs
+        # ==============================================
+
         if setup is None:
-            decision.reasons.append("Trade setup is missing")
+
+            decision.reasons.append(
+                "Trade setup is missing."
+            )
+
             return decision
 
-        # -----------------------------------------------------
-        # Direction
-        # -----------------------------------------------------
+        if confidence is None:
 
-        direction = getattr(setup, "direction", None)
+            decision.reasons.append(
+                "Confidence result is missing."
+            )
 
-        if direction not in ("BUY", "SELL"):
-            decision.reasons.append("No valid trading direction")
             return decision
 
-        # -----------------------------------------------------
-        # Prices
-        # -----------------------------------------------------
+        if not setup.valid:
 
-        decision.signal = direction
-        decision.entry_price = float(getattr(setup, "entry_price", 0.0))
-        decision.stop_loss = float(getattr(setup, "stop_loss", 0.0))
-        decision.target_price = float(getattr(setup, "target_price", 0.0))
-        decision.confidence = float(getattr(setup, "confidence", 0.0))
+            decision.reasons.append(
+                "Trade setup is invalid."
+            )
 
-        # -----------------------------------------------------
-        # Basic Validation
-        # -----------------------------------------------------
-
-        if decision.entry_price <= 0:
-            decision.reasons.append("Invalid entry price")
             return decision
 
-        if decision.stop_loss <= 0:
-            decision.reasons.append("Invalid stop loss")
+        if not confidence.valid:
+
+            decision.reasons.append(
+                "Confidence result is invalid."
+            )
+
             return decision
 
-        if decision.target_price <= 0:
-            decision.reasons.append("Invalid target price")
+        if not confidence.minimum_confidence_met:
+
+            decision.reasons.append(
+                "Minimum confidence not satisfied."
+            )
+
             return decision
 
-        # -----------------------------------------------------
-        # Risk / Reward
-        # -----------------------------------------------------
+        if setup.direction not in (
+            Direction.LONG,
+            Direction.SHORT,
+        ):
 
-        risk = abs(decision.entry_price - decision.stop_loss)
-        reward = abs(decision.target_price - decision.entry_price)
+            decision.reasons.append(
+                "Invalid trade direction."
+            )
+
+            return decision
+
+        # ==============================================
+        # Populate Initial Decision
+        # ==============================================
+
+        decision.direction = setup.direction
+
+        decision.confidence_score = (
+            confidence.confidence_score
+        )
+
+        entry = setup.current_price
+        # ==============================================
+        # Calculate Stop Loss
+        # ==============================================
+
+        if setup.direction == Direction.LONG:
+
+            stop_loss = (
+                setup.swing_low
+                - (setup.atr * CONFIG.ATR_BUFFER)
+            )
+
+        else:
+
+            stop_loss = (
+                setup.swing_high
+                + (setup.atr * CONFIG.ATR_BUFFER)
+            )
+
+        risk = abs(entry - stop_loss)
 
         if risk <= 0:
-            decision.reasons.append("Invalid Stop Loss")
-            return decision
 
-        decision.risk_reward = round(reward / risk, 2)
-
-        if decision.risk_reward < self.MIN_RISK_REWARD:
             decision.reasons.append(
-                f"Risk Reward below {self.MIN_RISK_REWARD:.1f}"
+                "Invalid trade risk."
             )
+
             return decision
 
-        # -----------------------------------------------------
-        # Passed
-        # -----------------------------------------------------
+        # ==============================================
+        # Calculate Target
+        # ==============================================
+
+        if setup.direction == Direction.LONG:
+
+            target = (
+                entry
+                + (risk * CONFIG.REWARD_RATIO)
+            )
+
+        else:
+
+            target = (
+                entry
+                - (risk * CONFIG.REWARD_RATIO)
+            )
+
+        reward = abs(target - entry)
+
+        risk_reward = round(
+            reward / risk,
+            2,
+        )
+
+        if (
+            risk_reward
+            < CONFIG.MINIMUM_RR
+        ):
+
+            decision.reasons.append(
+                "Risk reward below minimum."
+            )
+
+            return decision
+
+        # ==============================================
+        # Populate Decision
+        # ==============================================
+
+        decision.entry_price = round(entry, 2)
+
+        decision.stop_loss = round(stop_loss, 2)
+
+        decision.target_price = round(target, 2)
+
+        decision.risk_reward = risk_reward
+
+        decision.quantity = (
+            CONFIG.MINIMUM_POSITION_SIZE
+        )
+        # ==============================================
+        # Final Validation
+        # ==============================================
 
         decision.valid = True
-        decision.reasons.append("Entry conditions satisfied")
+
+        decision.reasons.append(
+            "Trade approved."
+        )
 
         return decision

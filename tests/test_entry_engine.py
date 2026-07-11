@@ -1,38 +1,114 @@
-import os
-import sys
+"""
+=========================================================
+PROJECT FALCON
+Entry Engine Tests
+=========================================================
+"""
 
-PROJECT_ROOT = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..")
-)
+from strategy.entry_engine import EntryEngine
 
-if PROJECT_ROOT not in sys.path:
-    sys.path.insert(0, PROJECT_ROOT)
-
-from types import SimpleNamespace
-
-from strategy.confidence_engine import ConfidenceEngine
+from models.trade_setup import TradeSetup
+from models.confidence_result import ConfidenceResult
+from models.enums import Direction
 
 
-setup = SimpleNamespace(
-    trend="UP",
-    structure="BULLISH",
-    ema_alignment=True,
-    bos=True,
-    choch=False,
-    golden_zone=True,
-    adx_confirmed=True,
-    rsi_confirmed=True,
-    liquidity_confirmed=False,
-)
+def test_buy_trade():
 
-engine = ConfidenceEngine()
+    engine = EntryEngine()
 
-result = engine.calculate(setup)
+    setup = TradeSetup(
+        valid=True,
+        direction=Direction.LONG,
+        current_price=100.0,
+        swing_low=95.0,
+        atr=2.0,
+    )
 
-engine.print_report(result)
+    confidence = ConfidenceResult(
+        confidence_score=90,
+        minimum_confidence_met=True,
+        valid=True,
+    )
 
-print("\nEngine:")
-print(engine)
+    decision = engine.run(setup, confidence)
 
-print("\nTradeable :", engine.is_tradeable(result))
-print("High Confidence :", engine.is_high_confidence(result))
+    assert decision.valid is True
+
+    assert decision.direction == Direction.LONG
+
+    assert decision.entry_price == 100.0
+
+    assert decision.stop_loss == 93.0
+
+    assert decision.target_price == 117.5
+
+    assert decision.risk_reward == 2.5
+
+
+def test_sell_trade():
+
+    engine = EntryEngine()
+
+    setup = TradeSetup(
+        valid=True,
+        direction=Direction.SHORT,
+        current_price=100.0,
+        swing_high=105.0,
+        atr=2.0,
+    )
+
+    confidence = ConfidenceResult(
+        confidence_score=95,
+        minimum_confidence_met=True,
+        valid=True,
+    )
+
+    decision = engine.run(setup, confidence)
+
+    assert decision.valid is True
+
+    assert decision.direction == Direction.SHORT
+
+    assert decision.entry_price == 100.0
+
+    assert decision.stop_loss == 107.0
+
+    assert decision.target_price == 82.5
+
+    assert decision.risk_reward == 2.5
+
+
+def test_reject_low_confidence():
+
+    engine = EntryEngine()
+
+    setup = TradeSetup(
+        valid=True,
+        direction=Direction.LONG,
+        current_price=100.0,
+        swing_low=95.0,
+        atr=2.0,
+    )
+
+    confidence = ConfidenceResult(
+        confidence_score=70,
+        minimum_confidence_met=False,
+        valid=True,
+    )
+
+    decision = engine.run(setup, confidence)
+
+    assert decision.valid is False
+
+
+def test_invalid_setup():
+
+    engine = EntryEngine()
+
+    setup = TradeSetup()
+
+    confidence = ConfidenceResult()
+
+    decision = engine.run(setup, confidence)
+
+    assert decision.valid is False

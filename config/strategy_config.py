@@ -1,50 +1,137 @@
 """
-Project FALCON
+=========================================================
+PROJECT FALCON
 Strategy Configuration
+Version : 2.0
+=========================================================
 
-Every backtest receives one StrategyConfig object.
-No hardcoded parameters should exist inside engines.
+Central configuration for the Strategy Layer.
+
+Changing values here changes the behaviour of the
+entire trading system without modifying engine code.
 """
 
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class StrategyConfig:
-    # ========= Trend =========
-    ema_fast: int = 5
-    ema_slow: int = 29
 
-    # ========= Momentum =========
-    adx_period: int = 14
-    adx_threshold: float = 20
+    # =====================================================
+    # TIMEFRAMES
+    # =====================================================
 
-    rsi_period: int = 14
-    rsi_buy: float = 60
-    rsi_sell: float = 40
+    BASE_TIMEFRAME = "15m"
 
-    # ========= ATR =========
-    atr_period: int = 14
-    atr_multiplier: float = 1.5
+    HTF_1 = "1H"
 
-    # ========= Fibonacci =========
-    fib_low: float = 0.382
-    fib_high: float = 0.618
+    HTF_2 = "4H"
 
-    # ========= Risk =========
-    risk_per_trade: float = 1.0
-    reward_ratio: float = 2.0
+    HTF_3 = "Daily"
 
-    # ========= Filters =========
-    use_market_context: bool = True
-    use_liquidity: bool = True
-    use_structure: bool = True
-    use_fibonacci: bool = True
-    use_volume: bool = False
+    # =====================================================
+    # MOVING AVERAGES
+    # =====================================================
 
-    # ========= Trading Session =========
-    session_start = "09:30"
-    session_end = "15:00"
+    FAST_EMA = 5
 
-    # ========= Confidence =========
-    minimum_score: int = 80
+    SLOW_EMA = 29
+
+    # =====================================================
+    # RSI
+    # =====================================================
+
+    RSI_PERIOD = 14
+
+    RSI_LONG = 60
+
+    RSI_SHORT = 40
+
+    # =====================================================
+    # ADX
+    # =====================================================
+
+    ADX_PERIOD = 14
+
+    ADX_MINIMUM = 20
+
+    # =====================================================
+    # ATR
+    # =====================================================
+
+    ATR_PERIOD = 14
+
+    ATR_MULTIPLIER = 1.5
+
+    ATR_BUFFER = 1.0
+
+    # =====================================================
+    # FIBONACCI
+    # =====================================================
+
+    GOLDEN_ZONE_LOW = 0.382
+
+    GOLDEN_ZONE_HIGH = 0.618
+
+    STOPLOSS_LEVEL = 0.236
+
+    # =====================================================
+    # RISK MANAGEMENT
+    # =====================================================
+
+    MINIMUM_RR = 2.5
+
+    REWARD_RATIO = 2.5
+
+    MAX_RISK_PER_TRADE = 1.0      # %
+
+    MAX_OPEN_TRADES = 1
+
+    MINIMUM_POSITION_SIZE = 1
+
+    # =====================================================
+    # CONFIDENCE
+    # =====================================================
+
+    MINIMUM_CONFIDENCE = 80
+
+    HIGH_CONFIDENCE = 90
+
+    # =====================================================
+    # TRADING SESSION
+    # =====================================================
+
+    MARKET_OPEN = "09:15"
+
+    ENTRY_START = "09:30"
+
+    ENTRY_END = "15:00"
+
+    MARKET_CLOSE = "15:30"
+
+    # =====================================================
+    # BACKTEST
+    # =====================================================
+
+    INITIAL_CAPITAL = 1_000_000
+
+    SLIPPAGE = 0.0005
+
+    BROKERAGE_PER_ORDER = 20
+
+    # =====================================================
+    # LOGGING
+    # =====================================================
+
+    ENABLE_LOGGING = True
+
+    ENABLE_DEBUG = False
+
+    SAVE_TRADE_LOG = True
+
+
+# ==========================================================
+# Global Config Instance
+# ==========================================================
+
+CONFIG = StrategyConfig()
