@@ -38,7 +38,7 @@ class Order:
 
     entry_price: float
 
-    stop_loss: float
+    STOPLOSS: float
 
     target: float
 

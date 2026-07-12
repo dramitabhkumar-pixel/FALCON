@@ -104,7 +104,7 @@ def main():
         )
 
         print(
-            f"Stop Loss     : {setup.stop_loss:.2f}"
+            f"Stop Loss     : {setup.STOPLOSS:.2f}"
         )
 
         print(

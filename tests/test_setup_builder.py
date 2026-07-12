@@ -123,7 +123,7 @@ def main():
 
     print(f"Direction        : {setup.direction}")
     print(f"Entry            : {setup.entry_price}")
-    print(f"Stop Loss        : {setup.stop_loss}")
+    print(f"Stop Loss        : {setup.STOPLOSS}")
     print(f"Target           : {setup.target_price}")
     print(f"Risk Reward      : {setup.risk_reward}")
 

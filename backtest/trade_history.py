@@ -18,7 +18,7 @@ class TradeRecord:
     entry_price: float
     exit_price: float
     quantity: int
-    stop_loss: float
+    STOPLOSS: float
     target: float
     pnl: float
     status: str
@@ -41,7 +41,7 @@ class TradeHistory:
             entry_price=order.filled_price or order.entry_price,
             exit_price=order.exit_price or 0.0,
             quantity=order.quantity,
-            stop_loss=order.stop_loss,
+            STOPLOSS=order.STOPLOSS,
             target=order.target,
             pnl=order.pnl,
             status=order.status.value,
@@ -62,7 +62,7 @@ class TradeHistory:
                     "entry_price",
                     "exit_price",
                     "quantity",
-                    "stop_loss",
+                    "STOPLOSS",
                     "target",
                     "pnl",
                     "status",

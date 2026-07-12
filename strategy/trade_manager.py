@@ -5,127 +5,116 @@ Trade Manager
 Version : 1.0
 =========================================================
 
-Manages the lifecycle of all trades.
+Coordinates EntryEngine and ExitEngine.
 
 Responsibilities
 ----------------
-- Register new trades
-- Track active trades
-- Update active trades
-- Move closed trades
-- Maintain trade history
+• Create new trades
+• Manage active trades
+• Maintain a single active trade
 
-This engine performs NO market analysis.
+Contains NO trading logic.
+=========================================================
 """
 
+from __future__ import annotations
+
 from core.base_engine import BaseEngine
+from core.candles import Candle
 
-from strategy.exit_engine import ExitEngine
-
+from models.trade_setup import TradeSetup
 from models.trade_decision import TradeDecision
-from models.enums import TradeStatus
+from models.confidence_result import ConfidenceResult
 
+from strategy.entry_engine import EntryEngine
+from strategy.exit_engine import ExitEngine
+from models.enums import TradeStatus
 
 class TradeManager(BaseEngine):
     """
-    Maintains active and completed trades.
+    Coordinates the complete trade lifecycle.
     """
 
     def __init__(self):
 
+        super().__init__()
+
+        self.entry_engine = EntryEngine()
         self.exit_engine = ExitEngine()
 
-        self.active_trades = []
-
-        self.closed_trades = []
+        self.active_trade: TradeDecision | None = None
 
     # =====================================================
-    # Open Trade
+    # Public API
     # =====================================================
 
-    def open_trade(
+    def evaluate(
         self,
-        trade: TradeDecision,
-    ) -> bool:
-
-        if trade is None:
-
-            return False
-
-        if not trade.valid:
-
-            return False
-
-        trade.status = TradeStatus.PENDING
-
-        self.active_trades.append(trade)
-
-        return True
-    # =====================================================
-    # Update Active Trades
-    # =====================================================
-
-    def update(
-        self,
-        current_price: float,
-    ) -> None:
+        setup: TradeSetup,
+        confidence: ConfidenceResult,
+        candle: Candle,
+        symbol: str = "",
+    ) -> TradeDecision | None:
         """
-        Updates all active trades using the Exit Engine.
+        Manage the complete trade lifecycle.
+
+        Returns:
+            Active TradeDecision or None.
         """
 
-        remaining_trades = []
+        # -------------------------------------------------
+        # Existing Trade
+        # -------------------------------------------------
 
-        for trade in self.active_trades:
+        if self.active_trade is not None:
 
-            updated_trade = self.exit_engine.run(
-                trade,
-                current_price,
+            self.active_trade = self.exit_engine.evaluate(
+                trade=self.active_trade,
+                candle=candle,
             )
 
-            if updated_trade.status == TradeStatus.CLOSED:
+            if self.active_trade.status == TradeStatus.CLOSED:
+                completed_trade = self.active_trade
 
-                self.closed_trades.append(
-                    updated_trade
-                )
+                self.active_trade = None
 
-            else:
+                return completed_trade
 
-                remaining_trades.append(
-                    updated_trade
-                )
+            return self.active_trade
 
-        self.active_trades = remaining_trades
-    # =====================================================
-    # Get Active Trades
-    # =====================================================
+        # -------------------------------------------------
+        # New Trade
+        # -------------------------------------------------
 
-    def get_active_trades(self) -> list[TradeDecision]:
-
-        return self.active_trades
-
-    # =====================================================
-    # Get Closed Trades
-    # =====================================================
-
-    def get_closed_trades(self) -> list[TradeDecision]:
-
-        return self.closed_trades
-
-    # =====================================================
-    # Statistics
-    # =====================================================
-
-    def active_count(self) -> int:
-
-        return len(self.active_trades)
-
-    def closed_count(self) -> int:
-
-        return len(self.closed_trades)
-
-    def total_trades(self) -> int:
-
-        return (
-            self.active_count()
-            + self.closed_count()
+        decision = self.entry_engine.evaluate(
+            setup=setup,
+            confidence=confidence,
+            candle=candle,
+            symbol=symbol,
         )
+
+        if decision.status == TradeStatus.ACTIVE:
+
+            self.active_trade = decision
+
+            return decision
+        
+
+        return None
+    
+    # =====================================================
+    # Utilities
+    # =====================================================
+
+    def has_active_trade(self) -> bool:
+        """
+        Returns True if there is an active trade.
+        """
+        return self.active_trade is not None
+
+    def reset(self) -> None:
+        """
+        Reset the trade manager.
+        Useful for backtesting.
+        """
+        self.active_trade = None

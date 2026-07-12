@@ -125,7 +125,7 @@ def generate_reports(
                 <td>{float(row.get("entry_price", 0)):,.2f}</td>
                 <td>{float(row.get("exit_price", 0)):,.2f}</td>
                 <td>{int(row.get("quantity", 0))}</td>
-                <td>{float(row.get("stop_loss", 0)):,.2f}</td>
+                <td>{float(row.get("STOPLOSS", 0)):,.2f}</td>
                 <td>{float(row.get("target", 0)):,.2f}</td>
                 <td class="{pnl_class} font-bold">{pnl_sign}{pnl_val:,.2f}</td>
                 <td>{row.get("status", "EXITED")}</td>

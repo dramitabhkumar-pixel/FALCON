@@ -295,6 +295,7 @@ class IndicatorEngine:
             column.lower()
             for column in df.columns
         ]
+        self._validate_dataframe(df)
 
         ema_fast_series = self._ema(
             df["close"],

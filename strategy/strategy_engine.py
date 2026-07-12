@@ -2,7 +2,7 @@
 =========================================================
 PROJECT FALCON
 Strategy Engine
-Version : 1.0
+Version : 2.0
 =========================================================
 
 Coordinates the complete strategy workflow.
@@ -13,19 +13,23 @@ Confluence Engine
     ↓
 Confidence Engine
     ↓
-Entry Engine
-    ↓
 Trade Manager
     ↓
 Trade Decision
 
-Author : Amitabh Kumar + ChatGPT
+Contains NO trading logic.
 =========================================================
 """
 
-from engine.confluence_engine import ConfluenceEngine
+from __future__ import annotations
+
+from core.candles import Candle
+
+from models.trade_setup import TradeSetup
+from models.trade_decision import TradeDecision
+
+from strategy.confluence_engine import ConfluenceEngine
 from strategy.confidence_engine import ConfidenceEngine
-from strategy.entry_engine import EntryEngine
 from strategy.trade_manager import TradeManager
 
 
@@ -33,45 +37,55 @@ class StrategyEngine:
     """
     Main strategy orchestrator.
 
-    This engine contains NO trading logic.
-    It only coordinates the individual strategy engines.
+    Coordinates the strategy engines without
+    implementing trading logic.
     """
 
     def __init__(self):
 
         self.confluence_engine = ConfluenceEngine()
         self.confidence_engine = ConfidenceEngine()
-        self.entry_engine = EntryEngine()
         self.trade_manager = TradeManager()
 
-    def process(self, setup):
+    # =====================================================
+    # Public API
+    # =====================================================
+
+    def process(
+        self,
+        setup: TradeSetup,
+        candle: Candle,
+        symbol: str = "",
+    ) -> TradeDecision | None:
         """
         Execute the complete strategy pipeline.
-
-        Parameters
-        ----------
-        setup : TradeSetup
-
-        Returns
-        -------
-        TradeDecision
         """
 
-        # ---------------------------------------------
+        # -------------------------------------------------
         # Confluence
-        # ---------------------------------------------
-        confluence = self.confluence_engine.evaluate(setup)
+        # -------------------------------------------------
 
-        # ---------------------------------------------
-        # Confidence
-        # ---------------------------------------------
-        confidence = self.confidence_engine.calculate(setup)
-
-        # ---------------------------------------------
-        # Entry
-        # ---------------------------------------------
-        decision = self.entry_engine.run(
+        confluence = self.confluence_engine.evaluate(
             setup,
-            confidence
         )
+
+        # -------------------------------------------------
+        # Confidence
+        # -------------------------------------------------
+
+        confidence = self.confidence_engine.evaluate(
+            confluence,
+        )
+
+        # -------------------------------------------------
+        # Trade Management
+        # -------------------------------------------------
+
+        decision = self.trade_manager.evaluate(
+            setup=setup,
+            confidence=confidence,
+            candle=candle,
+            symbol=symbol,
+        )
+
         return decision

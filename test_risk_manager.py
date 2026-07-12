@@ -5,7 +5,7 @@ engine = RiskManager()
 result = engine.run(
     account_balance=500000,
     entry_price=100,
-    stop_loss=95,
+    STOPLOSS=95,
     target_price=115,
 )
 

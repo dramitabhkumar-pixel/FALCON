@@ -39,7 +39,7 @@ class OrderBookEngine:
 
             entry_price=entry,
 
-            stop_loss=sl,
+            STOPLOSS=sl,
 
             target=target
 

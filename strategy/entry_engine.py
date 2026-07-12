@@ -163,7 +163,7 @@ class EntryEngine:
         )
 
         decision.quantity = (
-            CONFIG.POSITION_SIZE
+            CONFIG.MINIMUM_POSITION_SIZE
         )
 
         decision.entry_price = round(
@@ -176,7 +176,7 @@ class EntryEngine:
         decision.stop_loss = round(
             stop_loss,
             2,
-        )
+        )      
 
         decision.target = round(
             target,
@@ -238,7 +238,7 @@ class EntryEngine:
                 * CONFIG.ATR_MULTIPLIER
             )
         )
-        # =====================================================
+    # =====================================================
     # Target
     # =====================================================
 
@@ -279,6 +279,7 @@ class EntryEngine:
         self,
         setup: TradeSetup,
         confidence: ConfidenceResult,
+        candle: Candle,
         symbol: str = "",
     ) -> TradeDecision:
         """
@@ -288,6 +289,6 @@ class EntryEngine:
         return self.evaluate(
            setup=setup,
            confidence=confidence,
-           candle=Candle,
+           candle=candle,
            symbol=symbol,
     )

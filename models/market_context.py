@@ -131,7 +131,7 @@ class TradeState:
 
     entry: Optional[float] = None
 
-    stop_loss: Optional[float] = None
+    STOPLOSS: Optional[float] = None
 
     target: Optional[float] = None
 

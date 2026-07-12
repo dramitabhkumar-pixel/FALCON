@@ -7,7 +7,7 @@ qty = rm.calculate_position_size(
 
     entry_price=51000,
 
-    stop_loss=50950
+    STOPLOSS=50950
 
 )
 
@@ -22,7 +22,7 @@ print(
 
         entry=51000,
 
-        stop_loss=50950,
+        STOPLOSS=50950,
 
         target=51150
 

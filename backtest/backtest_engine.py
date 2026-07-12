@@ -1,209 +1,210 @@
 """
-Main backtest engine for Project FALCON.
-Supports StrategyConfig for parameter optimization.
+=========================================================
+PROJECT FALCON
+Backtest Engine
+Version : 4.0
+=========================================================
+
+Historical replay engine for Project FALCON.
+
+Responsibilities
+----------------
+• Replay historical candles
+• Feed rolling DataFrame to StrategyRunner
+• Collect TradeDecision objects
+• Compute performance metrics
+
+Contains NO trading logic.
+=========================================================
 """
 
 from __future__ import annotations
 
+
+from typing import List
+
 import pandas as pd
 
-from backtest.candle_feed import BacktestCandleFeed
-from backtest.data_loader import (
-    load_csv,
-    make_synthetic_ohlc,
-    normalize_columns,
-)
-from backtest.performance import compute_metrics
-from backtest.strategy_runner import StrategyRunner
-from backtest.trade_engine import BacktestTradeEngine
+from models.trade_decision import TradeDecision
 
-from config.strategy_config import StrategyConfig
+from backtest.strategy_runner import StrategyRunner
+from strategy.strategy_config import CONFIG
 
 
 class BacktestEngine:
     """
-    Walk-forward Backtest Engine.
+    Historical replay engine.
 
-    Every run uses one StrategyConfig object.
-    This makes parameter optimization possible.
+    Replays candles sequentially through the
+    frozen Project FALCON strategy pipeline.
     """
 
-    def __init__(
-        self,
-        df: pd.DataFrame,
-        config: StrategyConfig | None = None,
-        symbol: str = "BANKNIFTY",
-        warmup_bars: int = 50,
-        initial_capital: float = 500_000,
-    ):
+    def __init__(self) -> None:
 
-        self.df = normalize_columns(df)
+        self.runner = StrategyRunner()
 
-        self.symbol = symbol
-        self.warmup_bars = warmup_bars
-        self.initial_capital = initial_capital
+        self.trade_log: List[TradeDecision] = []
 
-        # ------------------------------------------------
-        # Strategy Configuration
-        # ------------------------------------------------
-        self.config = config or StrategyConfig()
+    # =====================================================
+    # Helpers
+    # =====================================================
 
-        # ------------------------------------------------
-        # Strategy Runner
-        # ------------------------------------------------
-        self.strategy = StrategyRunner(
-            config=self.config
+    @staticmethod
+    def _validate_dataframe(
+        dataframe: pd.DataFrame,
+    ) -> None:
+        """
+        Validate historical dataframe.
+        """
+
+        if dataframe is None:
+            raise ValueError(
+                "Historical dataframe cannot be None."
+            )
+
+        if dataframe.empty:
+            raise ValueError(
+                "Historical dataframe is empty."
+            )
+
+        dataframe.columns = [
+            str(column).lower()
+            for column in dataframe.columns
+        ]
+
+        required = [
+            "open",
+            "high",
+            "low",
+            "close",
+        ]
+
+        missing = [
+
+            column
+
+            for column in required
+
+            if column not in dataframe.columns
+
+        ]
+
+        if missing:
+
+            raise ValueError(
+                f"Missing columns: {missing}"
+            )
+
+    @staticmethod
+    def _normalize(
+        dataframe: pd.DataFrame,
+    ) -> pd.DataFrame:
+        """
+        Normalize dataframe columns.
+        """
+
+        df = dataframe.copy()
+
+        df.columns = [
+
+            str(column).lower()
+
+            for column in df.columns
+
+        ]
+
+        return df
+
+    @staticmethod
+    def _minimum_bars() -> int:
+        """
+        Minimum candles before strategy evaluation.
+        """
+
+        return max(
+
+            CONFIG.SLOW_EMA,
+
+            CONFIG.ADX_PERIOD,
+
+            CONFIG.ATR_PERIOD,
+
+            CONFIG.RSI_PERIOD,
+
+            50,
+
         )
 
-        # ------------------------------------------------
-        # Trade Engine
-        # ------------------------------------------------
-        self.trade_engine = BacktestTradeEngine(
-            symbol=symbol
+    # =====================================================
+    # Public API
+    # =====================================================
+
+    def run(
+      self,
+      dataframe: pd.DataFrame,
+      symbol: str = "",
+) -> List[TradeDecision]:
+    
+        """
+        Execute a historical backtest.
+
+        Parameters
+        ----------
+        dataframe
+            Historical OHLCV dataframe.
+
+        symbol
+            Trading symbol.
+
+        Returns
+        -------
+        list[TradeDecision]
+        """
+
+        self._validate_dataframe(
+            dataframe,
         )
 
-    @classmethod
-    def from_csv(
-        cls,
-        path: str,
-        config: StrategyConfig | None = None,
-        symbol: str = "BANKNIFTY",
-        warmup_bars: int = 50,
-        initial_capital: float = 500_000,
-    ):
-
-        return cls(
-            load_csv(path),
-            config=config,
-            symbol=symbol,
-            warmup_bars=warmup_bars,
-            initial_capital=initial_capital,
+        df = self._normalize(
+            dataframe,
         )
 
-    def run(self) -> dict:
+        self.trade_log.clear()
 
-        feed = BacktestCandleFeed(
-            self.df,
-            warmup_bars=self.warmup_bars,
-        )
+        minimum = self._minimum_bars()
 
-        signals = 0
-        entries = 0
+        # -------------------------------------------------
+        # Historical Replay
+        # -------------------------------------------------
 
-        for window, bar in feed:
+        for index in range(
 
-            self.trade_engine.on_bar(bar)
+            minimum,
 
-            setup = self.strategy.evaluate(window)
+            len(df),
 
-            if setup is None:
+        ):
+
+            history = df.iloc[
+                : index + 1
+            ].copy()
+
+            decision = self.runner.process(
+
+                dataframe=history,
+
+                symbol=symbol,
+
+            )
+
+            if decision is None:
+
                 continue
 
-            signals += 1
+            self.trade_log.append(
 
-            order = self.trade_engine.try_entry(
-    side=setup.side,
-    entry=setup.entry,
-    stop_loss=setup.stop_loss,
-    target=setup.target,
-    entry_time=bar.name,
-)
+                decision
 
-            if order is not None:
-                entries += 1
+            )
 
-        metrics = compute_metrics(
-            self.trade_engine.history.to_dataframe(),
-            initial_capital=self.initial_capital,
-        )
-
-        metrics["signals"] = signals
-        metrics["entries"] = entries
-        metrics["symbol"] = self.symbol
-        metrics["bars_processed"] = len(self.df) - self.warmup_bars
-
-        # Strategy Parameters
-        metrics["ema_fast"] = self.config.ema_fast
-        metrics["ema_slow"] = self.config.ema_slow
-        metrics["adx_threshold"] = self.config.adx_threshold
-        metrics["rsi_buy"] = self.config.rsi_buy
-        metrics["reward_ratio"] = self.config.reward_ratio
-
-        return metrics
-
-    def run_verbose(self) -> dict:
-
-        result = self.run()
-
-        print("=" * 60)
-        print("PROJECT FALCON BACKTEST")
-        print("=" * 60)
-
-        for key, value in result.items():
-            print(f"{key:20}: {value}")
-
-        print("=" * 60)
-
-        return result
-
-    def run_full(self) -> tuple[dict, pd.DataFrame]:
-        """
-        Returns:
-
-            metrics,
-            trade_history_dataframe
-        """
-
-        result = self.run()
-
-        history_df = self.trade_engine.history.to_dataframe()
-
-        return result, history_df
-
-
-def run_backtest(
-    df: pd.DataFrame | None = None,
-    csv_path: str | None = None,
-    config: StrategyConfig | None = None,
-    symbol: str = "BANKNIFTY",
-    warmup_bars: int = 50,
-):
-
-    if csv_path is not None:
-
-        engine = BacktestEngine.from_csv(
-            csv_path,
-            config=config,
-            symbol=symbol,
-            warmup_bars=warmup_bars,
-        )
-
-    elif df is not None:
-
-        engine = BacktestEngine(
-            df,
-            config=config,
-            symbol=symbol,
-            warmup_bars=warmup_bars,
-        )
-
-    else:
-
-        engine = BacktestEngine(
-            make_synthetic_ohlc(),
-            config=config,
-            symbol=symbol,
-            warmup_bars=warmup_bars,
-        )
-
-    return engine.run()
-
-
-if __name__ == "__main__":
-
-    config = StrategyConfig()
-
-    BacktestEngine(
-        make_synthetic_ohlc(),
-        config=config,
-    ).run_verbose()
+        return self.trade_log

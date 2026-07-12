@@ -38,7 +38,7 @@ class RiskManager(BaseEngine):
 
         entry_price: float,
 
-        stop_loss: float,
+        STOPLOSS: float,
 
         account_size: float = 500000,
 
@@ -46,7 +46,7 @@ class RiskManager(BaseEngine):
 
         risk_amount = account_size * RISK_PER_TRADE
 
-        risk_per_unit = abs(entry_price - stop_loss)
+        risk_per_unit = abs(entry_price - STOPLOSS)
 
         if risk_per_unit <= 0:
 
@@ -64,13 +64,13 @@ class RiskManager(BaseEngine):
 
         entry: float,
 
-        stop_loss: float,
+        STOPLOSS: float,
 
         target: float,
 
     ) -> bool:
 
-        risk = abs(entry - stop_loss)
+        risk = abs(entry - STOPLOSS)
 
         reward = abs(target - entry)
 
@@ -139,7 +139,7 @@ class RiskManager(BaseEngine):
         self,
         account_balance: float,
         entry_price: float,
-        stop_loss: float,
+        STOPLOSS: float,
         target_price: float,
         open_positions: int = 0,
     ) -> RiskResult:
@@ -147,12 +147,12 @@ class RiskManager(BaseEngine):
         Runs risk checks and returns RiskResult.
         """
         can_tr = self.can_trade(open_positions)
-        valid_tr = self.validate_trade(entry_price, stop_loss, target_price)
+        valid_tr = self.validate_trade(entry_price, STOPLOSS, target_price)
 
         approved = can_tr and valid_tr
-        qty = self.calculate_position_size(entry_price, stop_loss, account_balance)
+        qty = self.calculate_position_size(entry_price, STOPLOSS, account_balance)
 
-        risk_per_unit = abs(entry_price - stop_loss)
+        risk_per_unit = abs(entry_price - STOPLOSS)
         reward_per_unit = abs(target_price - entry_price)
 
         risk_amount = qty * risk_per_unit
@@ -162,7 +162,7 @@ class RiskManager(BaseEngine):
         if not can_tr:
             message = f"Rejected: Limit hit (open_positions={open_positions}, daily_loss={self.daily_loss})"
         elif not valid_tr:
-            message = f"Rejected: Invalid parameters or bad risk-reward (entry={entry_price}, sl={stop_loss}, target={target_price})"
+            message = f"Rejected: Invalid parameters or bad risk-reward (entry={entry_price}, sl={STOPLOSS}, target={target_price})"
         else:
             message = "Approved"
 
@@ -172,9 +172,9 @@ class RiskManager(BaseEngine):
             risk_percent=round(risk_percent, 2),
             risk_amount=round(risk_amount, 2),
             entry_price=entry_price,
-            stop_loss=stop_loss,
+            STOPLOSS=STOPLOSS,
             target_price=target_price,
             quantity=qty,
             risk_reward=round(risk_reward, 2),
             message=message,
-        )
+        )

@@ -38,7 +38,7 @@ def main():
 
     entry = 51000
 
-    stop_loss = 50950
+    STOPLOSS = 50950
 
     target = 51150
 
@@ -50,7 +50,7 @@ def main():
 
         entry=entry,
 
-        stop_loss=stop_loss,
+        STOPLOSS=STOPLOSS,
 
         target=target,
 
@@ -71,7 +71,7 @@ def main():
     print(f"Side         : {order.side.value}")
     print(f"Quantity     : {order.quantity}")
     print(f"Entry Price  : {order.entry_price}")
-    print(f"Stop Loss    : {order.stop_loss}")
+    print(f"Stop Loss    : {order.STOPLOSS}")
     print(f"Target       : {order.target}")
     print(f"Status       : {order.status.value}")
 

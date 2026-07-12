@@ -2,328 +2,323 @@
 =========================================================
 PROJECT FALCON
 Strategy Runner
+Version : 4.0
+=========================================================
 
-Backtest Integration Layer
+Historical replay adapter for Project FALCON.
 
-Historical Replay
-        ↓
-Indicator Engine
-        ↓
-Swing Engine
-        ↓
-Liquidity Engine
-        ↓
-Setup Builder
-        ↓
-Strategy Engine
-        ↓
-RunnerDecision
+Responsibilities
+----------------
+• Accept rolling historical DataFrame
+• Calculate indicators
+• Build TradeSetup
+• Build current Candle
+• Execute StrategyEngine
+• Return TradeDecision | None
+
+Contains NO trading logic.
 =========================================================
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from typing import Optional
 
 import pandas as pd
 
-from models.enums import Direction
+from core.candles import Candle
 
-from config.strategy_config import StrategyConfig
+from models.trade_decision import TradeDecision
 
 from engine.indicator_engine import IndicatorEngine
-from engine.swing_engine import SwingEngine
-from engine.liquidity_engine import LiquidityEngine
-
 from strategy.setup_builder import SetupBuilder
 from strategy.strategy_engine import StrategyEngine
+from strategy.strategy_config import CONFIG
 
-
-# ==========================================================
-# Runner Decision
-# ==========================================================
-
-@dataclass
-class RunnerDecision:
-    """
-    Returned to BacktestEngine.
-    """
-
-    side: Direction
-
-    entry: float
-
-    stop_loss: float
-
-    target: float
-
-    confidence: float = 0.0
-
-
-# ==========================================================
-# Strategy Runner
-# ==========================================================
 
 class StrategyRunner:
-
     """
-    Integrates every strategy component.
-
-    Historical Window
-            ↓
-    Indicator Engine
-            ↓
-    Swing Engine
-            ↓
-    Liquidity Engine
-            ↓
-    Setup Builder
-            ↓
-    Strategy Engine
-            ↓
-    RunnerDecision
+    Thin adapter between the Backtest Engine and the
+    frozen Project FALCON strategy pipeline.
     """
 
-    def __init__(
-        self,
-        config: StrategyConfig | None = None,
-    ):
+    def __init__(self) -> None:
 
-        self.config = config or StrategyConfig()
-
-        self.indicators = IndicatorEngine()
-
-        self.swing_engine = SwingEngine()
-
-        self.liquidity_engine = LiquidityEngine()
-
-        self.builder = SetupBuilder()
-
-        self.strategy = StrategyEngine()
+        self.indicator_engine = IndicatorEngine()
+        self.setup_builder = SetupBuilder()
+        self.strategy_engine = StrategyEngine()
 
     # =====================================================
     # Helpers
     # =====================================================
 
     @staticmethod
-    def _prepare_dataframe(
-        df: pd.DataFrame,
-    ) -> pd.DataFrame:
-
+    def _validate_dataframe(
+        dataframe: pd.DataFrame,
+    ) -> None:
         """
-        IndicatorEngine expects lowercase OHLC columns.
+        Validate incoming rolling dataframe.
         """
 
-        working = df.copy()
+        if dataframe is None:
+            raise ValueError(
+                "Rolling dataframe cannot be None."
+            )
 
-        working.columns = [
-            str(c).lower()
-            for c in working.columns
+        if dataframe.empty:
+            raise ValueError(
+                "Rolling dataframe is empty."
+            )
+
+        dataframe.columns = [
+            str(column).lower()
+            for column in dataframe.columns
         ]
 
-        return working
+        required = [
+            "open",
+            "high",
+            "low",
+            "close",
+        ]
 
-    @staticmethod
-    def _convert_swings(
-        swings_df: pd.DataFrame,
-    ) -> list[dict]:
+        missing = [
 
-        """
-        Convert Swing dataframe into
-        LiquidityEngine input.
-        """
+            column
 
-        if swings_df is None:
+            for column in required
 
-            return []
+            if column not in dataframe.columns
 
-        if swings_df.empty:
+        ]
 
-            return []
+        if missing:
 
-        swings = []
+            raise ValueError(
 
-        for _, row in swings_df.iterrows():
-
-            swings.append(
-
-                {
-                    "type": str(
-                        row["Type"]
-                    ).upper(),
-
-                    "price": float(
-                        row["Price"]
-                    ),
-                }
+                f"Missing required columns: {missing}"
 
             )
 
-        return swings
+        minimum = max(
+
+            CONFIG.SLOW_EMA,
+
+            CONFIG.ADX_PERIOD,
+
+            CONFIG.ATR_PERIOD,
+
+            CONFIG.RSI_PERIOD,
+
+            50,
+
+        )
+
+        if len(dataframe) < minimum:
+
+            raise ValueError(
+
+                f"Need at least {minimum} candles."
+
+            )
+
+    @staticmethod
+    def _normalize(
+        dataframe: pd.DataFrame,
+    ) -> pd.DataFrame:
+        """
+        Normalize dataframe column names.
+        """
+
+        df = dataframe.copy()
+
+        df.columns = [
+
+            str(column).lower()
+
+            for column in df.columns
+
+        ]
+
+        return df
+
+    @staticmethod
+    def _build_candle(
+        dataframe: pd.DataFrame,
+    ) -> Candle:
+        """
+        Convert latest row into Candle model.
+        """
+
+        row = dataframe.iloc[-1]
+
+        timestamp = None
+
+        if "timestamp" in dataframe.columns:
+
+            timestamp = row["timestamp"]
+
+        elif "datetime" in dataframe.columns:
+
+            timestamp = row["datetime"]
+
+        elif dataframe.index.dtype.kind == "M":
+
+            timestamp = dataframe.index[-1]
+
+        else:
+
+            raise ValueError(
+
+                "No timestamp/datetime column found."
+
+            )
+
+        volume = 0.0
+
+        if "volume" in dataframe.columns:
+
+            volume = float(row["volume"])
+
+        return Candle(
+
+            timestamp=timestamp,
+
+            open=float(row["open"]),
+
+            high=float(row["high"]),
+
+            low=float(row["low"]),
+
+            close=float(row["close"]),
+
+            volume=volume,
+
+        )
 
     # =====================================================
-    # Main Evaluation
+    # Public API
     # =====================================================
 
-    def evaluate(
+    def process(
         self,
-        window: pd.DataFrame,
-    ) -> RunnerDecision | None:
-        
-        if window is None or window.empty:
-            return None
+        dataframe: pd.DataFrame,
+        symbol: str = "",
+    ) -> Optional[TradeDecision]:
+        """
+        Execute one historical strategy evaluation.
+
+        Parameters
+        ----------
+        dataframe
+            Rolling OHLCV dataframe ending at the
+            current historical candle.
+
+        symbol
+            Trading symbol.
+
+        Returns
+        -------
+        TradeDecision | None
+        """
 
         try:
 
-            # ------------------------------------------
-            # Prepare dataframe
-            # ------------------------------------------
+            # ---------------------------------------------
+            # Validation
+            # ---------------------------------------------
 
-            working = self._prepare_dataframe(window)
-
-            # ------------------------------------------
-            # Indicator Engine
-            # ------------------------------------------
-
-            indicators = self.indicators.analyze(
-                working
+            self._validate_dataframe(
+                dataframe,
             )
 
-            # ------------------------------------------
-            # Swing Engine
-            # (Used only for Liquidity Engine)
-            # ------------------------------------------
-
-            swings_df = self.swing_engine.run(
-                window
+            df = self._normalize(
+                dataframe,
             )
 
-            swing_list = self._convert_swings(
-                swings_df
+            # ---------------------------------------------
+            # Indicator Analysis
+            # ---------------------------------------------
+
+            indicator = self.indicator_engine.analyze(
+                df,
             )
 
-            # ------------------------------------------
-            # Liquidity Engine
-            # ------------------------------------------
+            if not indicator.valid:
+                return None
 
-            liquidity_result = self.liquidity_engine.analyze(
-                swing_list
+            # ---------------------------------------------
+            # Current Price
+            # ---------------------------------------------
+
+            close = float(
+                df.iloc[-1]["close"]
             )
 
-            if liquidity_result.buy_side_liquidity:
+            # ---------------------------------------------
+            # Build Trade Setup
+            # ---------------------------------------------
 
-                liquidity = "BUY_SIDE"
+            setup = self.setup_builder.build(
 
-            elif liquidity_result.sell_side_liquidity:
+                dataframe=df,
 
-                liquidity = "SELL_SIDE"
+                ema_fast=indicator.ema_fast,
 
-            else:
+                ema_slow=indicator.ema_slow,
 
-                liquidity = "NONE"
+                rsi=indicator.rsi,
 
-            # ------------------------------------------
-            # Latest Candle
-            # ------------------------------------------
+                adx=indicator.adx,
 
-            latest = window.iloc[-1]
+                atr=indicator.atr,
 
-            # ------------------------------------------
-            # Setup Builder
-            # ------------------------------------------
+                avg_atr=indicator.avg_atr,
 
-            setup = self.builder.build(
+                volume=indicator.volume,
 
-                dataframe=window,
+                close=close,
 
-                ema_fast=indicators.ema_fast,
-
-                ema_slow=indicators.ema_slow,
-
-                rsi=indicators.rsi,
-
-                adx=indicators.adx,
-
-                atr=indicators.atr,
-
-                avg_atr=indicators.avg_atr,
-
-                volume=indicators.volume,
-
-                close=float(
-                    latest["Close"]
-                ),
-
-                liquidity=liquidity,
             )
+
+            if setup is None:
+                return None
 
             if not setup.valid:
                 return None
 
-            # ------------------------------------------
-            # Strategy Engine
-            # ------------------------------------------
+            # ---------------------------------------------
+            # Current Candle
+            # ---------------------------------------------
 
-            decision = self.strategy.process(
-                setup
+            candle = self._build_candle(
+                df,
             )
 
-            if decision is None:
-                return None
+            # ---------------------------------------------
+            # Execute Strategy
+            # ---------------------------------------------
 
-            if not decision.valid:
-                return None
+            decision = self.strategy_engine.process(
 
-            # ------------------------------------------
-            # Convert Signal
-            # ------------------------------------------
+                setup=setup,
 
-            from models.enums import Direction
+                candle=candle,
 
-            # ------------------------------------------
-            # Convert Direction
-            # ------------------------------------------
+                symbol=symbol,
 
-            if decision.direction == Direction.LONG:
-
-               side = Direction.LONG
-
-            elif decision.direction == Direction.SHORT:
-
-             side = Direction.SHORT
-
-            else:
-
-             return None
-            # ------------------------------------------
-            # Return to Backtest Engine
-            # ------------------------------------------
-
-            return RunnerDecision(
-
-                side=side,
-
-                entry=float(
-                    decision.entry_price
-                ),
-
-                stop_loss=float(
-                    decision.stop_loss
-                ),
-
-                target=float(
-                    decision.target_price
-                ),
-
-                confidence=float(
-                    decision.confidence_score
-                ),
             )
 
-        except Exception as exc:
+            # ---------------------------------------------
+            # Result
+            # ---------------------------------------------
+
+            return decision
+
+        except Exception as ex:
 
             print(
-                f"[StrategyRunner] Error: {exc}"
+                f"[StrategyRunner] {ex}"
             )
 
             return None

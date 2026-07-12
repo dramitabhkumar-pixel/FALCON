@@ -153,7 +153,7 @@ class TradeSignal:
 
     entry: float
 
-    stop_loss: float
+    STOPLOSS: float
 
     target: float
 
@@ -175,7 +175,7 @@ class Position:
 
     entry_price: float
 
-    stop_loss: float
+    STOPLOSS: float
 
     target: float
 

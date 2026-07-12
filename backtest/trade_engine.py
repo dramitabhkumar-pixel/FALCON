@@ -41,7 +41,7 @@ class BacktestTradeEngine:
         self,
         side: Direction,
         entry: float,
-        stop_loss: float,
+        STOPLOSS: float,
         target: float,
         entry_time,
     ):
@@ -50,7 +50,7 @@ class BacktestTradeEngine:
             symbol=self.symbol,
             side=side,
             entry=entry,
-            stop_loss=stop_loss,
+            STOPLOSS=STOPLOSS,
             target=target,
             open_positions=self.open_position_count,
         )
@@ -121,16 +121,16 @@ class BacktestTradeEngine:
 
         if order.side == Direction.LONG:
 
-            stop_hit = low <= order.stop_loss
+            stop_hit = low <= order.STOPLOSS
             target_hit = high >= order.target
 
             # Conservative assumption:
             # Stop Loss is hit first if both occur
             if stop_hit and target_hit:
-                return order.stop_loss
+                return order.STOPLOSS
 
             if stop_hit:
-                return order.stop_loss
+                return order.STOPLOSS
 
             if target_hit:
                 return order.target
@@ -141,14 +141,14 @@ class BacktestTradeEngine:
         # SELL Position
         # -------------------------------
 
-        stop_hit = high >= order.stop_loss
+        stop_hit = high >= order.STOPLOSS
         target_hit = low <= order.target
 
         if stop_hit and target_hit:
-            return order.stop_loss
+            return order.STOPLOSS
 
         if stop_hit:
-            return order.stop_loss
+            return order.STOPLOSS
 
         if target_hit:
             return order.target

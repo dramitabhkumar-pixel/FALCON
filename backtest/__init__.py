@@ -1,4 +1,4 @@
-from backtest.backtest_engine import BacktestEngine, run_backtest
+from backtest.backtest_engine import BacktestEngine
 from backtest.candle_feed import BacktestCandleFeed
 from backtest.data_loader import (
     load_csv,
@@ -21,5 +21,4 @@ __all__ = [
     "load_csv",
     "make_synthetic_ohlc",
     "normalize_columns",
-    "run_backtest",
 ]

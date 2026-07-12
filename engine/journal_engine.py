@@ -15,7 +15,7 @@ class JournalEngine:
             "entry_price",
             "exit_price",
             "quantity",
-            "stop_loss",
+            "STOPLOSS",
             "target",
             "pnl",
             "status",
@@ -47,7 +47,7 @@ class JournalEngine:
                 order.entry_price,
                 order.exit_price,
                 order.quantity,
-                order.stop_loss,
+                order.STOPLOSS,
                 order.target,
                 order.pnl,
                 order.status.value

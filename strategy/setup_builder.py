@@ -29,6 +29,7 @@ Author : Amitabh Kumar + ChatGPT
 from __future__ import annotations
 
 from models.trade_setup import TradeSetup
+from engine.liquidity_engine import LiquidityEngine
 
 from engine.market_context_engine import MarketContextEngine
 from engine.structure_engine import StructureEngine
@@ -47,6 +48,7 @@ class SetupBuilder:
 
         self.market_context_engine = MarketContextEngine()
         self.swing_engine = SwingEngine()
+        self.liquidity_engine = LiquidityEngine()
         self.swing_fibonacci_engine = SwingFibonacciEngine()
         self.structure_engine = StructureEngine()
         self.confluence_engine = ConfluenceEngine()
@@ -121,7 +123,6 @@ class SetupBuilder:
         avg_atr: float,
         volume: float,
         close: float,
-        liquidity: str,
     ) -> TradeSetup:
 
         setup = TradeSetup()
@@ -166,6 +167,24 @@ class SetupBuilder:
         self._validate_swings(
             swings
         )
+
+        # -------------------------------------------------
+        # Liquidity Engine
+        # -------------------------------------------------
+
+        liquidity_result = self.liquidity_engine.analyze(swings)
+
+        # -------------------------------------------------
+        # Liquidity Signal
+        # -------------------------------------------------
+
+        liquidity = "NONE"
+
+        if liquidity_result.buy_side_liquidity:
+         liquidity = "BUY_SIDE"
+
+        elif liquidity_result.sell_side_liquidity:
+         liquidity = "SELL_SIDE"
 
         print("\n================ LAST 10 SWINGS ================")
         print(swings.tail(10))
@@ -244,15 +263,7 @@ class SetupBuilder:
         # Liquidity
         # -------------------------------------------------
 
-        setup.liquidity = str(
-            liquidity
-        ).upper() in (
-
-            "BUY_SIDE",
-
-            "SELL_SIDE",
-
-        )
+        setup.liquidity = liquidity != "NONE"
 
         # -------------------------------------------------
         # Swing Direction
@@ -338,13 +349,13 @@ class SetupBuilder:
 
             setup.entry_price = close
 
-            setup.stop_loss = fibonacci.fib_618
+            setup.STOPLOSS = fibonacci.fib_618
 
             risk = (
 
                 setup.entry_price
 
-                - setup.stop_loss
+                - setup.STOPLOSS
 
             )
 
@@ -362,11 +373,11 @@ class SetupBuilder:
 
             setup.entry_price = close
 
-            setup.stop_loss = fibonacci.fib_382
+            setup.STOPLOSS = fibonacci.fib_382
 
             risk = (
 
-                setup.stop_loss
+                setup.STOPLOSS
 
                 - setup.entry_price
 
@@ -390,7 +401,7 @@ class SetupBuilder:
 
             setup.entry_price > 0
 
-            and setup.stop_loss > 0
+            and setup.STOPLOSS > 0
 
             and setup.target_price > 0
 
@@ -402,7 +413,7 @@ class SetupBuilder:
 
                     setup.entry_price
 
-                    - setup.stop_loss
+                    - setup.STOPLOSS
 
                 )
 
@@ -418,7 +429,7 @@ class SetupBuilder:
 
                 risk = (
 
-                    setup.stop_loss
+                    setup.STOPLOSS
 
                     - setup.entry_price
 
@@ -459,7 +470,7 @@ class SetupBuilder:
         print("Pullback       :", fibonacci.pullback_valid)
         print("Golden Zone    :", setup.golden_zone)
         print("Entry Price    :", setup.entry_price)
-        print("Stop Loss      :", setup.stop_loss)
+        print("Stop Loss      :", setup.STOPLOSS)
         print("Target Price   :", setup.target_price)
         print("Risk Reward    :", setup.risk_reward)
         print("=================================\n")
@@ -479,7 +490,7 @@ class SetupBuilder:
 
             and setup.entry_price > 0
 
-            and setup.stop_loss > 0
+            and setup.STOPLOSS > 0
 
             and setup.target_price > 0
 

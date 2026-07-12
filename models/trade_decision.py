@@ -17,8 +17,9 @@ from typing import List
 from datetime import datetime
 from models.enums import ConfidenceGrade
 
-confidence_grade: ConfidenceGrade = ConfidenceGrade.D
+
 from models.enums import (
+    ConfidenceGrade,
     Direction,
     TradeStatus,
     ExitReason,
@@ -79,7 +80,7 @@ class TradeDecision:
     # =====================================================
 
     confidence_score: int = 0
-    confidence_grade: str = ""
+    confidence_grade: ConfidenceGrade = ConfidenceGrade.D
 
     # =====================================================
     # Market Snapshot

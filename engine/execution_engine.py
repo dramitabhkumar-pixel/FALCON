@@ -18,7 +18,7 @@ class ExecutionEngine:
         symbol,
         side,
         entry,
-        stop_loss,
+        STOPLOSS,
         target,
         open_positions=0
     ):
@@ -31,7 +31,7 @@ class ExecutionEngine:
         # Strategy Validation
         if not self.risk.validate_trade(
             entry,
-            stop_loss,
+            STOPLOSS,
             target
         ):
             print("[Execution] Invalid Trade")
@@ -40,7 +40,7 @@ class ExecutionEngine:
         # Position Size
         qty = self.risk.calculate_position_size(
             entry,
-            stop_loss
+            STOPLOSS
         )
 
         # Create Order
@@ -49,7 +49,7 @@ class ExecutionEngine:
             side=side,
             quantity=qty,
             entry=entry,
-            sl=stop_loss,
+            sl=STOPLOSS,
             target=target
         )
 
@@ -71,7 +71,7 @@ class ExecutionEngine:
         current_price
     ):
 
-        if self.trade_manager.check_stop_loss(
+        if self.trade_manager.check_STOPLOSS(
             order,
             current_price
         ):

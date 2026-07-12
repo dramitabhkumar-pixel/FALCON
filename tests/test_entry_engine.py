@@ -38,7 +38,7 @@ def test_buy_trade():
 
     assert decision.entry_price == 100.0
 
-    assert decision.stop_loss == 93.0
+    assert decision.STOPLOSS == 93.0
 
     assert decision.target_price == 117.5
 
@@ -71,7 +71,7 @@ def test_sell_trade():
 
     assert decision.entry_price == 100.0
 
-    assert decision.stop_loss == 107.0
+    assert decision.STOPLOSS == 107.0
 
     assert decision.target_price == 82.5
 

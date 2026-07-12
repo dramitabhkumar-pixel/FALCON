@@ -22,7 +22,7 @@ class BacktestOrder:
 
     side: str
     entry: float
-    stop_loss: float
+    STOPLOSS: float
     target: float
 
     confidence: float = 0.0

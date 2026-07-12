@@ -20,7 +20,7 @@ class RiskResult:
 
     entry_price: float
 
-    stop_loss: float
+    STOPLOSS: float
 
     target_price: float
 

@@ -31,7 +31,7 @@ class TradeManager(BaseEngine):
 
     # -----------------------------------------------------
 
-    def check_stop_loss(
+    def check_STOPLOSS(
         self,
         order,
         current_price: float,
@@ -41,9 +41,9 @@ class TradeManager(BaseEngine):
             return False
 
         if order.side.name == "LONG":
-            return current_price <= order.stop_loss
+            return current_price <= order.STOPLOSS
 
-        return current_price >= order.stop_loss
+        return current_price >= order.STOPLOSS
 
     # -----------------------------------------------------
 
@@ -74,7 +74,7 @@ class TradeManager(BaseEngine):
         if order.filled_price is None:
             return
 
-        order.stop_loss = order.filled_price
+        order.STOPLOSS = order.filled_price
 
         self.log(
             f"Moved SL to Breakeven : {order.symbol}"
@@ -82,10 +82,10 @@ class TradeManager(BaseEngine):
 
     # -----------------------------------------------------
 
-    def trail_stop_loss(
+    def trail_STOPLOSS(
         self,
         order,
-        new_stop_loss: float,
+        new_STOPLOSS: float,
     ):
 
         if order.status != Direction.FILLED:
@@ -93,9 +93,9 @@ class TradeManager(BaseEngine):
 
         if order.side.name == "LONG":
 
-            if new_stop_loss > order.stop_loss:
+            if new_STOPLOSS > order.STOPLOSS:
 
-                order.stop_loss = new_stop_loss
+                order.STOPLOSS = new_STOPLOSS
 
                 self.log(
                     f"Trailing SL Updated : {order.symbol}"
@@ -103,9 +103,9 @@ class TradeManager(BaseEngine):
 
         else:
 
-            if new_stop_loss < order.stop_loss:
+            if new_STOPLOSS < order.STOPLOSS:
 
-                order.stop_loss = new_stop_loss
+                order.STOPLOSS = new_STOPLOSS
 
                 self.log(
                     f"Trailing SL Updated : {order.symbol}"
@@ -178,7 +178,7 @@ class TradeManager(BaseEngine):
         current_price: float,
     ):
 
-        if self.check_stop_loss(
+        if self.check_STOPLOSS(
             order,
             current_price,
         ):
