@@ -261,26 +261,21 @@ class StrategyRunner:
 
             setup = self.setup_builder.build(
 
-                dataframe=df,
+               dataframe=df,
+               ema_fast=indicator.ema_fast,
+               ema_slow=indicator.ema_slow,
+               rsi=indicator.rsi,
+               adx=indicator.adx,
+               atr=indicator.atr,
+               avg_atr=indicator.avg_atr,
+               volume=indicator.volume,
+               close=close,
+               liquidity="NONE",
 
-                ema_fast=indicator.ema_fast,
+               
 
-                ema_slow=indicator.ema_slow,
-
-                rsi=indicator.rsi,
-
-                adx=indicator.adx,
-
-                atr=indicator.atr,
-
-                avg_atr=indicator.avg_atr,
-
-                volume=indicator.volume,
-
-                close=close,
-
+               
             )
-
             if setup is None:
                 return None
 
@@ -315,10 +310,11 @@ class StrategyRunner:
 
             return decision
 
-        except Exception as ex:
+        except Exception:
+            import traceback
+            traceback.print_exc()
 
-            print(
-                f"[StrategyRunner] {ex}"
-            )
+
+            
 
             return None

@@ -47,10 +47,12 @@ class SwingFibonacciEngine:
     MIN_IMPULSE_CANDLES = 8
 
     REQUIRED_PRICE_COLUMNS = {
-        "Open",
-        "High",
-        "Low",
-        "Close",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        
     }
 
     REQUIRED_SWING_COLUMNS = {
@@ -237,18 +239,14 @@ class SwingFibonacciEngine:
         if float(previous["Price"]) == float(current["Price"]):
             return False
 
-        previous_strength = Strength(
-            str(previous["Strength"]).upper()
-        )
+        previous_strength = float(previous["Strength"])
 
-        current_strength = Strength(
-            str(current["Strength"]).upper()
-        )
+        current_strength = float(current["Strength"])
 
-        if previous_strength == Strength.WEAK:
+        if previous_strength <= 0:
             return False
 
-        if current_strength == Strength.WEAK:
+        if current_strength <= 0:
             return False
 
         previous_type = SwingType(
@@ -355,7 +353,7 @@ class SwingFibonacciEngine:
         levels: dict,
     ) -> bool:
 
-        close = float(df.iloc[-1]["Close"])
+        close = float(df.iloc[-1]["close"])
 
         if not self._is_inside_golden_zone(
             close,

@@ -125,13 +125,13 @@ class SwingEngine(BaseEngine):
 
         required = [
 
-            "Open",
+            "open",
 
-            "High",
+            "high",
 
-            "Low",
+            "low",
 
-            "Close",
+            "close",
 
         ]
 
@@ -187,25 +187,26 @@ class SwingEngine(BaseEngine):
 
         for i in range(start, end):
 
-            current_high = df.iloc[i]["High"]
+            current_high = df.iloc[i]["high"]
 
-            current_low = df.iloc[i]["Low"]
+            current_low = df.iloc[i]["low"]
 
             left_highs = df.iloc[
                 i-self.config.left_bars:i
-            ]["High"]
+            ]["high"]
 
             right_highs = df.iloc[
                 i+1:i+self.config.right_bars+1
-            ]["High"]
+            ]["high"]
 
             left_lows = df.iloc[
                 i-self.config.left_bars:i
-            ]["Low"]
+            ]["low"]
 
             right_lows = df.iloc[
                 i+1:i+self.config.right_bars+1
-            ]["Low"]            # --------------------------------------------
+            ]["low"] 
+           # --------------------------------------------
             # Swing High
             # --------------------------------------------
 
