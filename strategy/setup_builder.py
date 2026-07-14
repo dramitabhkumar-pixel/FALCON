@@ -37,7 +37,9 @@ from engine.market_context_engine import MarketContextEngine
 from engine.structure_engine import StructureEngine
 from strategy.confluence_engine import ConfluenceEngine
 from engine.swing_engine import SwingEngine
+from engine.liquidity_engine import LiquidityEngine
 from engine.swing_fibonacci_engine import SwingFibonacciEngine
+   
 
 
 class SetupBuilder:
@@ -50,6 +52,7 @@ class SetupBuilder:
 
         self.market_context_engine = MarketContextEngine()
         self.swing_engine = SwingEngine()
+        self.liquidity_engine = LiquidityEngine()
         self.swing_fibonacci_engine = SwingFibonacciEngine()
         self.structure_engine = StructureEngine()
         self.confluence_engine = ConfluenceEngine()
@@ -124,7 +127,7 @@ class SetupBuilder:
         avg_atr: float,
         volume: float,
         close: float,
-        liquidity: str,
+        
     ) -> TradeSetup:
 
         setup = TradeSetup()
@@ -198,6 +201,21 @@ class SetupBuilder:
         print("\n================ LAST 10 SWINGS ================")
         print(swings.tail(10))
         print("================================================\n")
+
+        # -------------------------------------------------
+        # Liquidity
+        # -------------------------------------------------
+
+        liquidity = self.liquidity_engine.analyze(
+           swings=swings,
+              atr=atr,
+        )
+        print("\n========== LIQUIDITY DEBUG ==========")
+        print("Buy Side :", liquidity.buy_side_liquidity)
+        print("Sell Side:", liquidity.sell_side_liquidity)
+        print("Equal Highs:", liquidity.equal_highs)
+        print("Equal Lows :", liquidity.equal_lows)
+        print("=====================================\n")
 
         # -------------------------------------------------
         # Swing Fibonacci
@@ -313,14 +331,10 @@ class SetupBuilder:
         # Liquidity
         # -------------------------------------------------
 
-        setup.liquidity = str(
-            liquidity
-        ).upper() in (
-
-            "BUY_SIDE",
-
-            "SELL_SIDE",
-
+        setup.liquidity = (
+            bool(liquidity.buy_side_liquidity)
+            or
+            bool(liquidity.sell_side_liquidity)
         )
 
         # -------------------------------------------------
@@ -348,6 +362,13 @@ class SetupBuilder:
             setup.direction = Direction.SHORT
         else:
              setup.direction = Direction.NONE
+        if setup.direction == Direction.LONG:
+            setup.ema_alignment = ema_fast > ema_slow
+        elif setup.direction == Direction.SHORT:
+            setup.ema_alignment = ema_fast < ema_slow
+        else:
+            setup.ema_alignment = False
+
 
 
         # -------------------------------------------------

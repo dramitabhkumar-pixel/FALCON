@@ -36,6 +36,7 @@ from strategy.strategy_engine import StrategyEngine
 from strategy.strategy_config import CONFIG
 
 
+
 class StrategyRunner:
     """
     Thin adapter between the Backtest Engine and the
@@ -47,6 +48,7 @@ class StrategyRunner:
         self.indicator_engine = IndicatorEngine()
         self.setup_builder = SetupBuilder()
         self.strategy_engine = StrategyEngine()
+        
 
     # =====================================================
     # Helpers
@@ -270,12 +272,13 @@ class StrategyRunner:
                avg_atr=indicator.avg_atr,
                volume=indicator.volume,
                close=close,
-               liquidity="NONE",
-
-               
-
-               
             )
+               
+
+               
+
+               
+            
             if setup is None:
                 return None
 

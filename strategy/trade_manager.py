@@ -92,6 +92,13 @@ class TradeManager(BaseEngine):
             candle=candle,
             symbol=symbol,
         )
+        print("\n========== ENTRY ENGINE ==========")
+        print("Decision :", decision)
+        if decision is not None:
+             print("Status   :", decision.status)
+        else:
+             print("Status   : None")
+        print("=================================\n")
 
         if decision.status == TradeStatus.ACTIVE:
 

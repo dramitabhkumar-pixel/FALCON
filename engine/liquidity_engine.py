@@ -23,7 +23,19 @@ class LiquidityEngine(BaseEngine):
 
         super().__init__()
 
-    def analyze(self, swings):
+    def analyze(
+            self, 
+            swings,
+            atr:float,
+    ):        
+
+        print("\n========== LIQUIDITY DEBUG ==========")
+        print(type(swings))
+
+        if hasattr(swings, "columns"):
+         print(swings.columns)
+
+        print("=====================================\n")
 
         self.log("Running Liquidity Engine")
 
@@ -33,16 +45,27 @@ class LiquidityEngine(BaseEngine):
         buy_side = []
         sell_side = []
 
-        tolerance = 0.20
+        # ----------------------------------
+        # Dynamic Tolerance
+        # ----------------------------------
 
-        highs = [
-            s for s in swings
-            if s["type"] == "HIGH"
+        tolerance = max(
+            atr * 0.25,
+            5.0,
+        )
+
+        print("\n===== LIQUIDITY TOLERANCE =====")
+        print("ATR       :", atr)
+        print("Tolerance :", round(tolerance, 2))
+        print("===============================")
+
+        highs = swings[
+            swings["Type"] == "HIGH"
         ]
+        
 
-        lows = [
-            s for s in swings
-            if s["type"] == "LOW"
+        lows = swings[
+            swings["Type"] == "LOW"
         ]
 
         # ----------------------------------
@@ -50,38 +73,37 @@ class LiquidityEngine(BaseEngine):
         # ----------------------------------
 
         for i in range(len(highs)-1):
+            p1 = highs.iloc[i]["Price"]
+            p2 = highs.iloc[i + 1]["Price"]
+            if abs(p1 - p2) <= tolerance:
+                equal_highs.append(p1)
+                buy_side.append(p1)
+        print(
+            p1,
+            p2,
+            abs(p1-p2)
+        )
 
-            if abs(
-                highs[i]["price"] -
-                highs[i+1]["price"]
-            ) <= tolerance:
 
-                equal_highs.append(
-                    highs[i]["price"]
-                )
-
-                buy_side.append(
-                    highs[i]["price"]
-                )
 
         # ----------------------------------
         # Equal Lows
         # ----------------------------------
 
         for i in range(len(lows)-1):
+            p1 = lows.iloc[i]["Price"]
+            p2 = lows.iloc[i + 1]["Price"]
+            if abs(p1 - p2) <= tolerance:
+                equal_lows.append(p1)
+                sell_side.append(p1)
+        print(
+            p1,
+            p2,
+            abs(p1-p2)
 
-            if abs(
-                lows[i]["price"] -
-                lows[i+1]["price"]
-            ) <= tolerance:
+        )
 
-                equal_lows.append(
-                    lows[i]["price"]
-                )
-
-                sell_side.append(
-                    lows[i]["price"]
-                )
+            
 
         return LiquidityResult(
 

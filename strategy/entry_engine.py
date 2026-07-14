@@ -96,18 +96,24 @@ class EntryEngine:
         # -------------------------------------------------
 
         if not setup.valid:
-            return decision
+             print("ENTRY FAIL -> setup.valid = False")
+             return decision
 
         if not confidence.valid:
-            return decision
+             print("ENTRY FAIL -> confidence.valid = False")
+             return decision
 
         if not confidence.minimum_confidence_met:
+            print("ENTRY FAIL -> minimum confidence not met:",
+                  confidence.confidence_score,
+            )
             return decision
 
         if setup.direction not in (
             Direction.LONG,
             Direction.SHORT,
         ):
+            print("ENTRY FAIL -> invalid direction:", setup.direction)
             return decision
 
         # -------------------------------------------------
@@ -125,6 +131,7 @@ class EntryEngine:
         )
 
         if risk <= 0:
+            print("ENTRY FAIL -> risk =", risk)
             return decision
 
         target = self._calculate_target(
@@ -142,15 +149,26 @@ class EntryEngine:
             2,
         )
 
-        if (
-            risk_reward
-            < CONFIG.MINIMUM_RR
-        ):
+        if risk_reward< CONFIG.MINIMUM_RR:
+        
+            print(
+                "ENTRY FAIL -> RR",
+                 risk_reward,
+                "<",
+                CONFIG.MINIMUM_RR,
+                
+            )
             return decision
 
         # -------------------------------------------------
         # Populate Decision
         # -------------------------------------------------
+        print("\n========== ENTRY PASSED ==========")
+        print("Entry Price :", entry_price)
+        print("Stop Loss   :", stop_loss)
+        print("Target      :", target)
+        print("RiskReward  :", risk_reward)
+        print("=================================\n")
 
         decision.trade_id = str(
             uuid4()

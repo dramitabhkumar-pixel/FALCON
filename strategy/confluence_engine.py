@@ -22,6 +22,8 @@ Author : Amitabh Kumar + ChatGPT
 """
 
 from __future__ import annotations
+from turtle import setup
+from unittest import result
 
 from models.trade_setup import TradeSetup
 from models.confluence_result import ConfluenceResult
@@ -97,7 +99,7 @@ class ConfluenceEngine:
             )
 
         return False
-        # =====================================================
+    # =====================================================
     # Structure Alignment
     # =====================================================
 
@@ -126,7 +128,7 @@ class ConfluenceEngine:
     # =====================================================
     # Momentum Confirmation
     # =====================================================
-
+    
     @staticmethod
     def _momentum_confirmation(
         setup: TradeSetup,
@@ -134,6 +136,14 @@ class ConfluenceEngine:
         """
         Validate momentum using ADX and RSI.
         """
+        print("\n========== MOMENTUM DEBUG ==========")
+        print("Direction :", setup.direction)
+        print("ADX       :", setup.adx)
+        print("ADX Min   :", CONFIG.ADX_MINIMUM)
+        print("RSI       :", setup.rsi)
+        print("RSI Long  :", CONFIG.RSI_LONG)
+        print("RSI Short :", CONFIG.RSI_SHORT)
+        print("====================================")
 
         if setup.adx < CONFIG.ADX_MINIMUM:
             return False
@@ -297,7 +307,19 @@ class ConfluenceEngine:
         # =====================================================
         # Validation
         # =====================================================
-
+                print("\n========== CONFLUENCE DEBUG ==========")
+                print("Trend Alignment      :", result.trend_alignment)
+                print("Structure Alignment  :", result.structure_alignment)
+                print("EMA Alignment        :", result.ema_alignment)
+                print("Momentum             :", result.momentum_confirmation)
+                print("Liquidity            :", result.liquidity_confirmation)
+                print("Fibonacci            :", result.fibonacci_confirmation)
+                print("Golden Zone          :", result.golden_zone_confirmation)
+                print("BOS                  :", result.bos_confirmation)
+                print("CHOCH                :", result.choch_confirmation)
+                print("Order Block          :", result.order_block_confirmation)
+                print("Fair Value Gap       :", result.fair_value_gap_confirmation)
+                print("======================================\n")
                 result.valid = True
 
                 return result
