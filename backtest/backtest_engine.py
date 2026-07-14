@@ -29,6 +29,9 @@ from models.trade_decision import TradeDecision
 
 from backtest.strategy_runner import StrategyRunner
 from strategy.strategy_config import CONFIG
+from models.enums import TradeStatus
+from models.trade_record import TradeRecord
+from journal.journal_writer import JournalWriter
 
 
 class BacktestEngine:
@@ -44,6 +47,7 @@ class BacktestEngine:
         self.runner = StrategyRunner()
 
         self.trade_log: List[TradeDecision] = []
+        self.journal = JournalWriter()
 
     # =====================================================
     # Helpers
@@ -144,6 +148,7 @@ class BacktestEngine:
       dataframe: pd.DataFrame,
       symbol: str = "",
 ) -> List[TradeDecision]:
+        
     
         """
         Execute a historical backtest.
@@ -160,18 +165,20 @@ class BacktestEngine:
         -------
         list[TradeDecision]
         """
-
+        print("########## MY BACKTEST ENGINE IS RUNNING ##########")
         self._validate_dataframe(
             dataframe,
         )
-
+        
         df = self._normalize(
-            dataframe,
+        dataframe,
         )
-
         self.trade_log.clear()
 
         minimum = self._minimum_bars()
+        
+
+        
 
         # -------------------------------------------------
         # Historical Replay
@@ -200,11 +207,139 @@ class BacktestEngine:
             if decision is None:
 
                 continue
+            
+            # Preserve original behaviour
+            self.trade_log.append(decision)
+            
 
-            self.trade_log.append(
+            # Journal only completed trades
+           
 
-                decision
+            
 
+            if decision.status == TradeStatus.CLOSED:
+
+     
+
+                record = TradeRecord(
+                    trade_id=decision.trade_id,
+                    symbol=decision.symbol,
+
+                    direction=decision.direction,
+
+                    entry_time=decision.entry_time,
+
+                    exit_time=decision.exit_time,
+
+                    entry_price=decision.entry_price,
+
+                    exit_price=decision.exit_price,
+
+                    stop_loss=decision.stop_loss,
+
+                    target=decision.target,
+
+                    quantity=decision.quantity,
+
+                    pnl=decision.pnl,
+
+                    exit_reason=decision.exit_reason,
+
+                    confidence=decision.confidence_score,
+
+                    winner=decision.pnl > 0,
+                )   
+
+                self.journal.write_trade(record)
+                
+
+              
+
+            closed = sum(
+                1 for t in self.trade_log
+                if t.status == TradeStatus.CLOSED
             )
 
+            active = sum(
+                1 for t in self.trade_log
+                if t.status == TradeStatus.ACTIVE
+            )
+
+            pending = sum(
+                1 for t in self.trade_log
+                if t.status == TradeStatus.PENDING
+            )
+
+        print("\n========== SUMMARY ==========")
+        print("Total   :", len(self.trade_log))
+        print("Closed  :", closed)
+        print("Active  :", active)
+        print("Pending :", pending)
+        print("=============================")
+
+        # -------------------------------------------------
+        # Performance Summary
+        # -------------------------------------------------
+
+        winners = [t for t in self.trade_log if t.pnl > 0]
+        losers = [t for t in self.trade_log if t.pnl <= 0]
+
+        print("\n========== PERFORMANCE ==========")
+        print("Total Trades :", len(self.trade_log))
+        print("Winners      :", len(winners))
+        print("Losers       :", len(losers))
+
+        if self.trade_log:
+            print(
+        "Win Rate     :",
+        round(len(winners) * 100 / len(self.trade_log), 2),
+        "%",
+    )
+
+        print("=================================")
+        print("\n========== TRADE LIST ==========")
+
+        for i, trade in enumerate(self.trade_log, start=1):
+
+            print(
+                i,
+                trade.trade_id,
+                trade.direction.name,
+                trade.entry_time,
+                trade.exit_time,
+                trade.exit_reason.name,
+                round(trade.pnl, 2),
+            )
+
+        print("================================")
+        ids = [t.trade_id for t in self.trade_log]
+
+        print("\nUnique IDs :", len(set(ids)))
+        print("Total IDs  :", len(ids))
+        targets = sum(
+            1 for t in self.trade_log
+            if t.exit_reason.name == "TARGET"
+        )
+
+        stops = sum(
+        1 for t in self.trade_log
+        if t.exit_reason.name == "STOPLOSS"
+        )
+
+        print("\nTargets :", targets)
+        print("Stops   :", stops)
+        print("\n========== PNL ==========")
+
+        for trade in self.trade_log:
+
+            print(
+                trade.trade_id,
+                trade.pnl,
+            )
         return self.trade_log
+
+            
+        
+
+            
+            

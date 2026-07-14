@@ -1,2 +1,0 @@
-total_trades,winning_trades,losing_trades,win_rate,total_pnl,avg_pnl,profit_factor,max_drawdown,return_pct,sharpe_ratio,expectancy,average_winner,average_loser,largest_winner,largest_loser,monthly_returns,signals,entries,symbol,bars_processed,ema_fast,ema_slow,adx_threshold,rsi_buy,reward_ratio
-0,0,0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,{},0,0,BANKNIFTY,473,5,29,20,60,2.0
