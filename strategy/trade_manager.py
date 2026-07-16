@@ -19,6 +19,8 @@ Contains NO trading logic.
 
 from __future__ import annotations
 
+from numpy import rint
+
 from core.base_engine import BaseEngine
 from core.candles import Candle
 
@@ -48,6 +50,7 @@ class TradeManager(BaseEngine):
     # Public API
     # =====================================================
 
+    
     def evaluate(
         self,
         setup: TradeSetup,
@@ -57,10 +60,19 @@ class TradeManager(BaseEngine):
     ) -> TradeDecision | None:
         """
         Manage the complete trade lifecycle.
-
         Returns:
             Active TradeDecision or None.
         """
+
+        print("\n========== TRADE MANAGER ==========")
+        print("Active Trade :", self.active_trade is not None)
+
+        if self.active_trade is not None:
+             print("Trade ID     :", self.active_trade.trade_id)
+             print("Status       :", self.active_trade.status)
+
+        print("===================================\n")
+
 
         # -------------------------------------------------
         # Existing Trade
@@ -72,9 +84,14 @@ class TradeManager(BaseEngine):
                 trade=self.active_trade,
                 candle=candle,
             )
+            print("\nAFTER EXIT ENGINE")
+            print("Status :", self.active_trade.status)
 
             if self.active_trade.status == TradeStatus.CLOSED:
                 completed_trade = self.active_trade
+                print("\nTRADE CLOSED")
+                print("Trade ID :", completed_trade.trade_id)
+                print("Reason   :", completed_trade.exit_reason)
 
                 self.active_trade = None
 
@@ -95,17 +112,30 @@ class TradeManager(BaseEngine):
         print("\n========== ENTRY ENGINE ==========")
         print("Decision :", decision)
         if decision is not None:
-             print("Status   :", decision.status)
+            print("Status   :", decision.status)
         else:
-             print("Status   : None")
+            print("Status   : None")
+
         print("=================================\n")
+
+        
+        if decision is None:
+            return None
+        
+
+
+        
+
 
         if decision.status == TradeStatus.ACTIVE:
 
             self.active_trade = decision
 
+            print("\nNEW ACTIVE TRADE")
+            print("Trade ID :", decision.trade_id)
+            print("Status   :", decision.status)
+
             return decision
-        
 
         return None
     

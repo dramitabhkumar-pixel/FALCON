@@ -22,11 +22,12 @@ Contains NO trading logic.
 """
 
 from __future__ import annotations
-
+from analysis.strategy_analyzer import StrategyAnalyzer
 from core.candles import Candle
 
 from models.trade_setup import TradeSetup
 from models.trade_decision import TradeDecision
+from models.enums import TradeStatus
 
 from strategy.confluence_engine import ConfluenceEngine
 from strategy.confidence_engine import ConfidenceEngine
@@ -46,6 +47,8 @@ class StrategyEngine:
         self.confluence_engine = ConfluenceEngine()
         self.confidence_engine = ConfidenceEngine()
         self.trade_manager = TradeManager()
+        self.analyzer = StrategyAnalyzer()
+
 
     # =====================================================
     # Public API
@@ -86,6 +89,17 @@ class StrategyEngine:
             confidence=confidence,
             candle=candle,
             symbol=symbol,
+        )
+
+        self.analyzer.record(
+             timestamp=candle.timestamp,
+             setup=setup,
+             confluence=confluence,
+             confidence=confidence,
+             accepted=(
+                decision is not None
+                and decision.status == TradeStatus.ACTIVE
+            ),
         )
 
         return decision

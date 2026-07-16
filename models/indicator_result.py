@@ -15,20 +15,15 @@ No trading logic.
 from dataclasses import dataclass
 
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class IndicatorResult:
-    """
-    Output produced by Indicator Engine.
-    """
 
     # =====================================================
     # Moving Averages
     # =====================================================
 
     ema_fast: float = 0.0
-
     ema_slow: float = 0.0
-
     ema_alignment: bool = False
 
     # =====================================================
@@ -36,7 +31,6 @@ class IndicatorResult:
     # =====================================================
 
     rsi: float = 50.0
-
     adx: float = 0.0
 
     # =====================================================
@@ -44,16 +38,8 @@ class IndicatorResult:
     # =====================================================
 
     atr: float = 0.0
-
-    avg_atr: float = 0.0
-
-    high_volatility: bool = False
-
-    # =====================================================
-    # Volume
-    # =====================================================
-
-    volume: float = 0.0
+    atr_ma: float = 0.0
+    atr_expanding: bool = False
 
     # =====================================================
     # Validation

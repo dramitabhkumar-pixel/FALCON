@@ -27,6 +27,7 @@ from models.enums import (
     TradeStatus,
     ExitReason,
 )
+from strategy.strategy_config import CONFIG
 
 
 class ExitEngine(BaseEngine):
@@ -82,6 +83,20 @@ class ExitEngine(BaseEngine):
                 trade,
                 candle,
                 ExitReason.TARGET,
+            )
+
+            return trade
+
+        # ---------------------------------------------
+        # Mandatory Intraday Square Off
+        # ---------------------------------------------
+
+        if candle.timestamp.time() >= CONFIG.FORCED_EXIT:
+
+            self._close_trade(
+                trade,
+                candle,
+                ExitReason.MARKET_CLOSE,
             )
 
             return trade
@@ -182,6 +197,9 @@ class ExitEngine(BaseEngine):
 
         elif reason == ExitReason.TARGET:
             trade.exit_price = trade.target
+
+        elif reason == ExitReason.MARKET_CLOSE:
+            trade.exit_price = candle.close
 
         self._calculate_pnl(trade)
 

@@ -2,8 +2,36 @@
 =========================================================
 Project FALCON
 Master Market Context
-Version : 2.0
+Version : 2.1
 =========================================================
+
+Shared object passed between every engine.
+
+Pipeline
+--------
+Daily Pivot Engine
+        ↓
+Daily Context Engine
+        ↓
+Indicator Engine
+        ↓
+Swing Engine
+        ↓
+Liquidity Engine
+        ↓
+Fibonacci Engine
+        ↓
+Confidence Engine
+        ↓
+Confluence Engine
+        ↓
+Entry Engine
+        ↓
+Trade Manager
+        ↓
+Structure Engine
+        ↓
+Exit Engine
 """
 
 from dataclasses import dataclass, field
@@ -15,6 +43,9 @@ from models.enums import (
     Strength,
     StructureEvent,
     Signal,
+    CPRRelation,
+    CPRWidth,
+    GapType,
 )
 
 
@@ -24,14 +55,10 @@ from models.enums import (
 
 @dataclass(slots=True)
 class TrendState:
-    """
-    Stores the current market trend.
-    """
+    """Stores the current market trend."""
 
     trend: Trend = Trend.UNKNOWN
-
     strength: Strength = Strength.NORMAL
-
     bias: Bias = Bias.NEUTRAL
 
 
@@ -41,16 +68,11 @@ class TrendState:
 
 @dataclass(slots=True)
 class StructureState:
-    """
-    Market Structure Information.
-    """
+    """Market Structure information."""
 
     bos: bool = False
-
     choch: bool = False
-
     liquidity_sweep: bool = False
-
     last_event: StructureEvent = StructureEvent.NONE
 
 
@@ -60,22 +82,14 @@ class StructureState:
 
 @dataclass(slots=True)
 class FibonacciState:
-    """
-    Fibonacci information.
-    """
+    """Fibonacci information."""
 
     swing_high: Optional[float] = None
-
     swing_low: Optional[float] = None
-
     golden_zone_low: Optional[float] = None
-
     golden_zone_high: Optional[float] = None
-
     premium: Optional[float] = None
-
     equilibrium: Optional[float] = None
-
     discount: Optional[float] = None
 
 
@@ -85,21 +99,32 @@ class FibonacciState:
 
 @dataclass(slots=True)
 class IndicatorState:
-    """
-    Indicator values.
-    """
+    """Indicator values."""
 
     ema_fast: Optional[float] = None
-
     ema_slow: Optional[float] = None
+    ema_alignment: bool = False
 
+    rsi: Optional[float] = None
     adx: Optional[float] = None
 
     atr: Optional[float] = None
+    atr_ma: Optional[float] = None
+    atr_expanding: bool = False
 
-    rsi: Optional[float] = None
 
-    volume: Optional[float] = None
+# =========================================================
+# DAILY STATE
+# =========================================================
+
+@dataclass(slots=True)
+class DailyState:
+    """Daily market context."""
+
+    bias: Bias = Bias.NEUTRAL
+    cpr_relation: CPRRelation = CPRRelation.INSIDE
+    cpr_width: CPRWidth = CPRWidth.NORMAL
+    gap: GapType = GapType.NONE
 
 
 # =========================================================
@@ -108,14 +133,10 @@ class IndicatorState:
 
 @dataclass(slots=True)
 class ConfluenceState:
-    """
-    Strategy confluence.
-    """
+    """Strategy confluence."""
 
     score: int = 0
-
     signal: Signal = Signal.NO_TRADE
-
     confidence: float = 0.0
 
 
@@ -125,16 +146,11 @@ class ConfluenceState:
 
 @dataclass(slots=True)
 class TradeState:
-    """
-    Current trade setup.
-    """
+    """Current trade setup."""
 
     entry: Optional[float] = None
-
-    STOPLOSS: Optional[float] = None
-
+    stop_loss: Optional[float] = None
     target: Optional[float] = None
-
     risk_reward: Optional[float] = None
 
 
@@ -144,40 +160,15 @@ class TradeState:
 
 @dataclass(slots=True)
 class MarketContext:
-    """
-    Shared object passed between every engine.
+    """Shared object passed between all engines."""
 
-    Swing Engine
-        ↓
-    Structure Engine
-        ↓
-    Trend Engine
-        ↓
-    Liquidity Engine
-        ↓
-    Fibonacci Engine
-        ↓
-    Indicator Engine
-        ↓
-    Confluence Engine
-        ↓
-    Entry Engine
-    """
-
-    # Raw Data
     swings: List[Any] = field(default_factory=list)
-
     candles: List[Any] = field(default_factory=list)
 
-    # Engine States
     trend: TrendState = field(default_factory=TrendState)
-
     structure: StructureState = field(default_factory=StructureState)
-
     fibonacci: FibonacciState = field(default_factory=FibonacciState)
-
+    daily: DailyState = field(default_factory=DailyState)
     indicators: IndicatorState = field(default_factory=IndicatorState)
-
     confluence: ConfluenceState = field(default_factory=ConfluenceState)
-
     trade: TradeState = field(default_factory=TradeState)

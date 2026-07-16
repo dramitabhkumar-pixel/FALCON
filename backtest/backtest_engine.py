@@ -196,6 +196,8 @@ class BacktestEngine:
                 : index + 1
             ].copy()
 
+
+
             decision = self.runner.process(
 
                 dataframe=history,
@@ -208,20 +210,14 @@ class BacktestEngine:
 
                 continue
             
-            # Preserve original behaviour
-            self.trade_log.append(decision)
+            
             
 
-            # Journal only completed trades
-           
-
-            
-
+            # Store only completed trades
             if decision.status == TradeStatus.CLOSED:
-
-     
-
-                record = TradeRecord(
+               self.trade_log.append(decision)
+               
+            record = TradeRecord(
                     trade_id=decision.trade_id,
                     symbol=decision.symbol,
 
@@ -250,7 +246,16 @@ class BacktestEngine:
                     winner=decision.pnl > 0,
                 )   
 
-                self.journal.write_trade(record)
+            self.journal.write_trade(record)
+
+           
+
+            
+
+            
+
+     
+
                 
 
               
@@ -336,6 +341,7 @@ class BacktestEngine:
                 trade.trade_id,
                 trade.pnl,
             )
+            self.runner.strategy_engine.analyzer.summary()
         return self.trade_log
 
             

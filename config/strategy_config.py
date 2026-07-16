@@ -64,6 +64,7 @@ class StrategyConfig:
     ATR_MULTIPLIER = 1.5
 
     ATR_BUFFER = 1.0
+    ATR_MA_PERIOD = 20
 
     # =====================================================
     # FIBONACCI
@@ -79,9 +80,9 @@ class StrategyConfig:
     # RISK MANAGEMENT
     # =====================================================
 
-    MINIMUM_RR = 2.5
+    MINIMUM_RR = 2.0
 
-    REWARD_RATIO = 2.5
+    REWARD_RATIO = 2.0
 
     MAX_RISK_PER_TRADE = 1.0      # %
 

@@ -91,6 +91,8 @@ class EntryEngine:
 
         decision = TradeDecision()
 
+        
+
         # -------------------------------------------------
         # Business Validation
         # -------------------------------------------------
@@ -104,9 +106,13 @@ class EntryEngine:
              return decision
 
         if not confidence.minimum_confidence_met:
-            print("ENTRY FAIL -> minimum confidence not met:",
-                  confidence.confidence_score,
-            )
+            print("\nENTRY FAIL -> CONFIDENCE")
+            print("Score :", confidence.confidence_score)
+            print("Grade :", confidence.grade)
+            print("Reasons:")
+            for reason in confidence.reasons:
+                print("   ", reason)
+            
             return decision
 
         if setup.direction not in (
@@ -151,13 +157,14 @@ class EntryEngine:
 
         if risk_reward< CONFIG.MINIMUM_RR:
         
-            print(
-                "ENTRY FAIL -> RR",
-                 risk_reward,
-                "<",
-                CONFIG.MINIMUM_RR,
-                
-            )
+            print("\nENTRY FAIL -> RISK REWARD")
+            print("Entry :", entry_price)
+            print("SL    :", stop_loss)
+            print("Target:", target)
+            print("Risk  :", risk)
+            print("Reward:", reward)
+            print("RR    :", risk_reward)
+            print("Need  :", CONFIG.MINIMUM_RR)
             return decision
 
         # -------------------------------------------------
@@ -224,6 +231,7 @@ class EntryEngine:
         decision.status = (
             TradeStatus.ACTIVE
         )
+
 
         return decision
 

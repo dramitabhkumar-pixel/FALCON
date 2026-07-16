@@ -2,7 +2,7 @@
 =========================================================
 PROJECT FALCON
 Confidence Engine
-Version : 3.0
+Version : 3.1
 =========================================================
 
 Evaluates the confidence of a validated ConfluenceResult.
@@ -27,7 +27,7 @@ from models.enums import ConfidenceGrade
 
 class ConfidenceEngine:
     """
-    Converts a ConfluenceResult into a ConfidenceResult.
+    Converts a validated ConfluenceResult into a ConfidenceResult.
     """
 
     # =====================================================
@@ -36,27 +36,22 @@ class ConfidenceEngine:
 
     WEIGHTS = {
 
-        "trend_alignment": 15,
+        # Primary Market Structure
+        "trend_alignment": 20,
+        "structure_alignment": 20,
 
-        "structure_alignment": 15,
-
+        # Trend Confirmation
         "ema_alignment": 10,
+        "adx_confirmation": 10,
+        "rsi_confirmation": 5,
 
-        "momentum_confirmation": 10,
-
+        # Smart Money Confluence
+        "golden_zone_confirmation": 15,
         "liquidity_confirmation": 10,
 
-        "fibonacci_confirmation": 10,
-
-        "golden_zone_confirmation": 10,
-
+        # Price Action Confirmation
         "bos_confirmation": 5,
-
         "choch_confirmation": 5,
-
-        "order_block_confirmation": 5,
-
-        "fair_value_gap_confirmation": 5,
     }
 
     MINIMUM_CONFIDENCE = 80
@@ -81,7 +76,7 @@ class ConfidenceEngine:
             )
 
     # =====================================================
-    # Grade
+    # Grade Calculation
     # =====================================================
 
     @staticmethod
@@ -102,6 +97,7 @@ class ConfidenceEngine:
             return ConfidenceGrade.C
 
         return ConfidenceGrade.D
+
     # =====================================================
     # Public API
     # =====================================================
@@ -111,32 +107,20 @@ class ConfidenceEngine:
         confluence: ConfluenceResult,
     ) -> ConfidenceResult:
 
-        self._validate(
-            confluence,
-        )
+        self._validate(confluence)
 
         score = 0
-
         reasons: list[str] = []
 
         for field_name, weight in self.WEIGHTS.items():
 
-            if getattr(
-                confluence,
-                field_name,
-            ):
+            passed = getattr(confluence, field_name)
 
+            if passed:
                 score += weight
-
-                reasons.append(
-                    f"{field_name}: PASS"
-                )
-
+                reasons.append(f"{field_name}: PASS (+{weight})")
             else:
-
-                reasons.append(
-                    f"{field_name}: FAIL"
-                )
+                reasons.append(f"{field_name}: FAIL (+0)")
 
         return ConfidenceResult(
 

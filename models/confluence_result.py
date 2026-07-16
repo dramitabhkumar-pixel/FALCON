@@ -45,12 +45,14 @@ class ConfluenceResult:
     structure_alignment: bool = False
 
     ema_alignment: bool = False
+    adx_confirmation: bool = False
+    rsi_confirmation: bool = False
 
-    momentum_confirmation: bool = False
+    
 
     liquidity_confirmation: bool = False
 
-    fibonacci_confirmation: bool = False
+    
 
     golden_zone_confirmation: bool = False
 
@@ -58,9 +60,9 @@ class ConfluenceResult:
 
     choch_confirmation: bool = False
 
-    order_block_confirmation: bool = False
+    
 
-    fair_value_gap_confirmation: bool = False
+    
 
     # =====================================================
     # Diagnostics

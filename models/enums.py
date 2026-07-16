@@ -115,6 +115,52 @@ class Direction(FalconEnum):
     LONG = "LONG"
     SHORT = "SHORT"
 
+# =========================================================
+# TREND / MOMENTUM
+# =========================================================
+
+class Momentum(FalconEnum):
+    """
+    RSI based momentum confirmation.
+    """
+
+    WEAK = "WEAK"
+    CONFIRMED = "CONFIRMED"
+
+
+# =========================================================
+# DAILY CONTEXT
+# =========================================================
+
+class CPRRelation(FalconEnum):
+    """
+    Current price position relative to the Central Pivot Range.
+    """
+
+    ABOVE = "ABOVE"
+    INSIDE = "INSIDE"
+    BELOW = "BELOW"
+
+
+class CPRWidth(FalconEnum):
+    """
+    Width classification of the Central Pivot Range.
+    """
+
+    NARROW = "NARROW"
+    NORMAL = "NORMAL"
+    WIDE = "WIDE"
+
+
+class GapType(FalconEnum):
+    """
+    Opening gap classification.
+    """
+
+    NONE = "NONE"
+    GAP_UP = "GAP_UP"
+    GAP_DOWN = "GAP_DOWN"
+
 
 class ConfidenceGrade(FalconEnum):
     D = "D"
