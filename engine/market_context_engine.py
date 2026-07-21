@@ -156,7 +156,9 @@ class MarketContextEngine:
         state.rsi = indicators.rsi
         state.adx = indicators.adx
         state.atr = indicators.atr
-        state.volume = indicators.volume
+        state.ema_alignment = indicators.ema_alignment
+        state.atr_expanding = indicators.atr_expanding
+        state.atr_ma = indicators.atr_ma
 
     # =====================================================
     # Trend State

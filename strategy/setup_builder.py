@@ -27,20 +27,19 @@ Author : Amitabh Kumar + ChatGPT
 """
 
 from __future__ import annotations
-from turtle import setup
 
 from models.trade_setup import TradeSetup
-from models.market_context import MarketContext
-from models.indicator_result import IndicatorResult
-from models.enums import Direction, Structure
+
 from engine.market_context_engine import MarketContextEngine
 from engine.structure_engine import StructureEngine
 from strategy.confluence_engine import ConfluenceEngine
 from engine.swing_engine import SwingEngine
-from engine.liquidity_engine import LiquidityEngine
 from engine.swing_fibonacci_engine import SwingFibonacciEngine
-   
-
+from engine.liquidity_engine import LiquidityEngine
+from models.market_context import MarketContext
+from models.indicator_result import IndicatorResult
+from models.enums import Structure
+from models.enums import Direction
 
 class SetupBuilder:
     """
@@ -52,10 +51,10 @@ class SetupBuilder:
 
         self.market_context_engine = MarketContextEngine()
         self.swing_engine = SwingEngine()
-        self.liquidity_engine = LiquidityEngine()
         self.swing_fibonacci_engine = SwingFibonacciEngine()
         self.structure_engine = StructureEngine()
         self.confluence_engine = ConfluenceEngine()
+        self.liquidity_engine = LiquidityEngine()
 
     # =====================================================
     # Helpers
@@ -124,22 +123,12 @@ class SetupBuilder:
         rsi: float,
         adx: float,
         atr: float,
-        avg_atr: float,
-        volume: float,
+        atr_ma: float,
         close: float,
         
     ) -> TradeSetup:
 
         setup = TradeSetup()
-
-
-        # -------------------------------------------------
-        # Current Market State
-        # -------------------------------------------------
-        setup.current_price=close
-        
-
-        
 
         # -------------------------------------------------
         # Indicators
@@ -147,32 +136,45 @@ class SetupBuilder:
 
         setup.ema_fast = ema_fast
         setup.ema_slow = ema_slow
-
+        setup.current_price = close
         setup.rsi = rsi
         setup.adx = adx
         setup.atr = atr
-        setup.volume = volume
 
         setup.ema_alignment = ema_fast > ema_slow
+        if ema_fast > ema_slow:
+            setup.direction = Direction.LONG
+        elif ema_fast < ema_slow:
+            setup.direction = Direction.SHORT
+        else:
+            setup.direction = Direction.NONE
+        setup.high_volatility = atr > atr_ma
 
-       # -------------------------------------------------
-       # Market Context
-       # -------------------------------------------------
-        indicators= IndicatorResult(
+        # -------------------------------------------------
+        # Market Context
+        # -------------------------------------------------
         
+        
+        context = MarketContext()
+        indicators = IndicatorResult(
+
+        
+            adx=adx,
+
             ema_fast=ema_fast,
+
             ema_slow=ema_slow,
             ema_alignment=ema_fast > ema_slow,
+
             rsi=rsi,
+
             atr=atr,
-            avg_atr=avg_atr,
-            high_volatility=atr >= avg_atr,
-            adx=adx,
-            volume=volume,
+
+            atr_ma=atr_ma,
+            atr_expanding=atr > atr_ma,
             valid=True
 
         )
-        context=MarketContext()
         context = self.market_context_engine.analyze(
             context=context,
             indicators=indicators,
@@ -182,14 +184,25 @@ class SetupBuilder:
         setup.bias = context.trend.bias
         setup.strength = context.trend.strength
 
+
+        # -------------------------------------------------
+        # Trading Direction
+        # -------------------------------------------------
+
+        if ema_fast > ema_slow:
+            setup.direction = Direction.LONG
+
+        elif ema_fast < ema_slow:
+            setup.direction = Direction.SHORT
+
+        else:
+            setup.direction = Direction.NONE
+        
+
         # -------------------------------------------------
         # Swing Engine
         # -------------------------------------------------
-        legacy_dataframe = dataframe.copy()
-        legacy_dataframe.columns = [
-            str(column).capitalize()
-            for column in legacy_dataframe.columns
-        ]
+
         swings = self.swing_engine.run(
             dataframe
         )
@@ -201,21 +214,6 @@ class SetupBuilder:
         print("\n================ LAST 10 SWINGS ================")
         print(swings.tail(10))
         print("================================================\n")
-
-        # -------------------------------------------------
-        # Liquidity
-        # -------------------------------------------------
-
-        liquidity = self.liquidity_engine.analyze(
-           swings=swings,
-              atr=atr,
-        )
-        print("\n========== LIQUIDITY DEBUG ==========")
-        print("Buy Side :", liquidity.buy_side_liquidity)
-        print("Sell Side:", liquidity.sell_side_liquidity)
-        print("Equal Highs:", liquidity.equal_highs)
-        print("Equal Lows :", liquidity.equal_lows)
-        print("=====================================\n")
 
         # -------------------------------------------------
         # Swing Fibonacci
@@ -244,47 +242,6 @@ class SetupBuilder:
             fibonacci=fibonacci,
 
         )
-        # -------------------------------------------------
-        # Populate TradeSetup
-        # -------------------------------------------------
-        setup.current_price = close
-
-        setup.swing_high = fibonacci.swing_high
-        setup.swing_low = fibonacci.swing_low
-
-        setup.golden_zone_high = fibonacci.golden_upper
-        setup.golden_zone_low = fibonacci.golden_lower
-
-        print("\n===== FIBONACCI DEBUG =====")
-        print("Close         :", close)
-        print("Fib 38.2      :", fibonacci.fib_382)
-        print("Fib 61.8      :", fibonacci.fib_618)
-        print("Golden Lower  :", fibonacci.golden_lower)
-        print("Golden Upper  :", fibonacci.golden_upper)
-        print("Pullback      :", fibonacci.pullback_valid)
-        print("===========================\n")
-
-        setup.fibonacci = True
-
-        setup.golden_zone = self._inside_golden_zone(
-            close=close,
-            fibonacci=fibonacci,
-        )
-
-
-        # -------------------------------------------------
-        # Execution Inputs
-        # -------------------------------------------------
-        setup.current_price = close
-        setup.swing_high = fibonacci.swing_high
-        setup.swing_low = fibonacci.swing_low
-        setup.golden_zone_low = fibonacci.golden_lower
-        setup.golden_zone_high = fibonacci.golden_upper
-        setup.fibonacci = True
-        setup.golden_zone = self._inside_golden_zone(
-            close=close,
-            fibonacci=fibonacci,
-        )
 
         # -------------------------------------------------
         # Structure Engine
@@ -298,11 +255,11 @@ class SetupBuilder:
             structure
         )
 
-        setup.structure = Structure.UNKNOWN
+        setup.structure = Structure.RANGE
 
-        setup.bos = False
+        
 
-        setup.choch = False
+        
 
 
         # -------------------------------------------------
@@ -320,129 +277,83 @@ class SetupBuilder:
             if "BULLISH" in signal:
 
                 setup.structure = Structure.BULLISH
-                setup.bos = True
+                
 
             elif "BEARISH" in signal:
 
                 setup.structure = Structure.BEARISH
-                setup.bos = True
+                
 
         # -------------------------------------------------
         # Liquidity
         # -------------------------------------------------
 
-        setup.liquidity = (
-            bool(liquidity.buy_side_liquidity)
-            or
-            bool(liquidity.sell_side_liquidity)
+        liquidity_result = self.liquidity_engine.analyze(
+
+            swings=swings,
+
+            atr=atr,
+
         )
 
-        # -------------------------------------------------
-        # Swing Direction
-        # -------------------------------------------------
-
-        if setup.structure == Structure.BULLISH:
-
-            swing_direction = "HH_HL"
-
-        elif setup.structure == Structure.BEARISH:
-
-            swing_direction = "LH_LL"
-
+        if liquidity_result.buy_side_liquidity:
+            liquidity = "BUY_SIDE"
+        elif liquidity_result.sell_side_liquidity:
+            liquidity = "SELL_SIDE"
         else:
+             liquidity = "NONE"
 
-            swing_direction = "UNKNOWN"
+        setup.liquidity = liquidity != "NONE"
+
+        print("\n========== SWING ASSIGNMENT ==========")
+        print(swings.tail(5))
+        print("======================================\n")
+        
 
         # -------------------------------------------------
-        # Trading Direction
+        # Assign Latest Swing Levels
         # -------------------------------------------------
-        if setup.structure == Structure.BULLISH:
-            setup.direction = Direction.LONG
-        elif setup.structure == Structure.BEARISH:
-            setup.direction = Direction.SHORT
-        else:
-             setup.direction = Direction.NONE
-        if setup.direction == Direction.LONG:
-            setup.ema_alignment = ema_fast > ema_slow
-        elif setup.direction == Direction.SHORT:
-            setup.ema_alignment = ema_fast < ema_slow
-        else:
-            setup.ema_alignment = False
 
+        highs = swings[
+            swings["Type"] == "HIGH"
+        ]
 
+        lows = swings[
+            swings["Type"] == "LOW"
+        ]
 
+        if not highs.empty:
+            setup.swing_high = float(
+                highs.iloc[-1]["Price"]
+            )
+
+        if not lows.empty:
+            setup.swing_low = float(
+                lows.iloc[-1]["Price"]
+            )
+
+        print("\n========== ASSIGNED SWINGS ==========")
+        print("Swing High :", setup.swing_high)
+        print("Swing Low  :", setup.swing_low)
+        print("=====================================\n")
         # -------------------------------------------------
         # Confluence
         # -------------------------------------------------
-        setup.valid=True
-        print("DEBUG setup.valid before Confluence =", setup.valid)
-        confluence = self.confluence_engine.evaluate(
+        confluence = self.confluence_engine.evaluate(setup)
 
-            setup
-            
-
-        )
-
-
-        setup.direction = confluence.direction
-
-        setup.reasons.extend(
-            confluence.reasons
-        )
-
+        setup.reasons.extend(confluence.reasons)
         
-
-       
-
+        
+        
         # -------------------------------------------------
         # Final Validation
         # -------------------------------------------------
 
-
-        print("\n========== SETUP DEBUG ==========")
-        print("Direction      :", setup.direction)
-        print("Structure      :", setup.structure)
-        print("Fibonacci      :", setup.fibonacci)
-        print("Pullback       :", fibonacci.pullback_valid)
-        print("Golden Zone    :", setup.golden_zone)
-        print("Trend          :", setup.trend)
-        print("Bias           :", setup.bias)
-        print("current price   :",setup.current_price)
-        print("setup.valid     :",setup.valid)
-        print("Swing High     :", setup.swing_high)
-        print("Swing Low      :", setup.swing_low)
-        print("Fib 38.2       :", fibonacci.fib_382)
-        print("Fib 61.8       :", fibonacci.fib_618)
-        print("Golden Lower   :", setup.golden_zone_low)
-        print("Golden Upper   :", setup.golden_zone_high)
-
-        print("Golden Zone    :", setup.golden_zone)
-        print("Pullback       :", fibonacci.pullback_valid)
-        print("Confluence     :", confluence.valid)
-        print("=================================\n")
-
-
-        
-        
-        
-        print("=================================\n")
-
-        
         setup.valid = (
 
-            setup.direction != Direction.NONE
-
-            and setup.structure != Structure.RANGE
-
+            setup.structure != Structure.UNKNOWN
             and setup.fibonacci
-
-            and fibonacci.pullback_valid
-
             and setup.golden_zone
-
-            and confluence.valid
-
+            and setup.direction !=Direction.NONE
         )
-
         return setup
-        

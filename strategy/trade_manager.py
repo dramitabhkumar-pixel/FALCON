@@ -19,11 +19,11 @@ Contains NO trading logic.
 
 from __future__ import annotations
 
-from numpy import rint
+
 
 from core.base_engine import BaseEngine
 from core.candles import Candle
-
+from strategy.strategy_config import CONFIG
 from models.trade_setup import TradeSetup
 from models.trade_decision import TradeDecision
 from models.confidence_result import ConfidenceResult
@@ -68,11 +68,23 @@ class TradeManager(BaseEngine):
         print("Active Trade :", self.active_trade is not None)
 
         if self.active_trade is not None:
-             print("Trade ID     :", self.active_trade.trade_id)
-             print("Status       :", self.active_trade.status)
+
+            print("Trade ID     :", self.active_trade.trade_id)
+            print("Status       :", self.active_trade.status)
+
+            print("\n========== EXIT EVALUATION ==========")
+            print("Timestamp    :", candle.timestamp)
+            print("Direction    :", self.active_trade.direction)
+            print("Entry Price  :", self.active_trade.entry_price)
+            print("Stop Loss    :", self.active_trade.stop_loss)
+            print("Target       :", self.active_trade.target)
+            print("High         :", candle.high)
+            print("Low          :", candle.low)
+            print("Time         :", candle.timestamp.time())
+            print("Forced Exit  :", CONFIG.FORCED_EXIT)
+            print("====================================")
 
         print("===================================\n")
-
 
         # -------------------------------------------------
         # Existing Trade
@@ -84,6 +96,20 @@ class TradeManager(BaseEngine):
                 trade=self.active_trade,
                 candle=candle,
             )
+            print("ACTIVE OBJECT :", id(self.active_trade))
+            print(
+                "Returned Status :",
+                self.active_trade.status,
+                self.active_trade.exit_reason,
+            )
+            print(
+                "After Exit:",
+                self.active_trade.status,
+                self.active_trade.exit_reason,
+                self.active_trade.exit_time,
+            )
+            if self.active_trade is None:
+                return None
             print("\nAFTER EXIT ENGINE")
             print("Status :", self.active_trade.status)
 
@@ -92,7 +118,7 @@ class TradeManager(BaseEngine):
                 print("\nTRADE CLOSED")
                 print("Trade ID :", completed_trade.trade_id)
                 print("Reason   :", completed_trade.exit_reason)
-
+                print("OBJECT ID:", id(completed_trade))
                 self.active_trade = None
 
                 return completed_trade
@@ -134,6 +160,7 @@ class TradeManager(BaseEngine):
             print("\nNEW ACTIVE TRADE")
             print("Trade ID :", decision.trade_id)
             print("Status   :", decision.status)
+            print("OBJECT ID:", id(self.active_trade))
 
             return decision
 

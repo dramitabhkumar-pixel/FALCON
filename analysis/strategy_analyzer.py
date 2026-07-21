@@ -73,23 +73,29 @@ class StrategyAnalyzer:
 
             "structure": setup.structure,
 
-            "ema_alignment": confluence.ema_alignment,
+            
 
             "adx_confirmation": confluence.adx_confirmation,
 
             "rsi_confirmation": confluence.rsi_confirmation,
 
-            "liquidity_confirmation":
-                confluence.liquidity_confirmation,
+            
 
-            "golden_zone_confirmation":
-                confluence.golden_zone_confirmation,
+            
+            "atr_confirmation":
+                confluence.atr_confirmation,
 
-            "bos_confirmation":
-                confluence.bos_confirmation,
+            "daily_bias_confirmation":
+                confluence.daily_bias_confirmation,
 
-            "choch_confirmation":
-                confluence.choch_confirmation,
+            "golden_zone":
+                setup.golden_zone,
+
+            "liquidity":
+                 setup.liquidity,
+
+            "entry_type":
+                 getattr(setup, "entry_type", None),
 
             "confidence_score":
                 confidence.confidence_score,
@@ -117,40 +123,35 @@ class StrategyAnalyzer:
         self.records.append(record)
 
     def summary(self) -> None:
-        """
-        Print analyzer summary.
-        """
-
         total = len(self.records)
-
         if total == 0:
 
             print("\n========== STRATEGY ANALYZER ==========")
             print("No setups recorded.")
             print("=======================================\n")
-
             return
-
         accepted = sum(
             1
             for record in self.records
             if record["accepted"]
         )
-
         rejected = total - accepted
-
         average_score = round(
             sum(
                 record["confidence_score"]
                 for record in self.records
-            ) / total,
+            )/total,
             2,
         )
-
-        highest_score = max(
+        highest_score = max (
             record["confidence_score"]
             for record in self.records
         )
+    
+
+    
+
+           
 
         lowest_score = min(
             record["confidence_score"]

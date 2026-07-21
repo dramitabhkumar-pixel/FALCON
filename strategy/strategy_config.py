@@ -40,7 +40,7 @@ class StrategyConfig:
 
     RSI_PERIOD = 14
     RSI_LONG = 60
-    RSI_SHORT = 40
+    RSI_SHORT = 55
 
     # =====================================================
     # ADX
@@ -74,7 +74,7 @@ class StrategyConfig:
     REWARD_RATIO = 2.0
 
     ATR_MULTIPLIER = 1.5
-
+    ATR_MA_PERIOD = 50
     POSITION_SIZE = 1
 
     MAX_RISK_PER_TRADE = 1.0      # %

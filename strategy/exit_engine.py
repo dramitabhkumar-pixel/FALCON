@@ -19,7 +19,7 @@ No entry logic belongs here.
 """
 
 from core.base_engine import BaseEngine
-from core.models import Candle
+from core.candles import Candle
 
 from models.trade_decision import TradeDecision
 from models.enums import (
@@ -52,6 +52,8 @@ class ExitEngine(BaseEngine):
         Evaluate an active trade using the latest candle.
         """
 
+        print("EXIT ENGINE RECEIVED:", candle.timestamp)
+
         self._update_extremes(
             trade,
             candle,
@@ -60,11 +62,32 @@ class ExitEngine(BaseEngine):
         self._update_trailing_stop(
             trade,
         )
+        print("\n========== EXIT ENGINE ==========")
+        print("Timestamp   :", candle.timestamp)
+        print("Time        :", candle.timestamp.time())
+        print("Entry       :", trade.entry_price)
+        print("Stop Loss   :", trade.stop_loss)
+        print("Target      :", trade.target)
+        print("High        :", candle.high)
+        print("Low         :", candle.low)
+        print("Forced Exit :", CONFIG.FORCED_EXIT)
+        print("=================================\n")
+        print("checking Stop loss..")
+        print("\n========== TRADE TRACE ==========")
+        print("Trade ID        :", trade.trade_id)
+        print("Entry Time      :", trade.entry_time)
+        print("Current Candle  :", candle.timestamp)
+        print("Entry Date      :", trade.entry_time.date())
+        print("Current Date    :", candle.timestamp.date())
+        print("Current Time    :", candle.timestamp.time())
+        print("Trade Status    :", trade.status)
+        print("================================")
 
         if self._check_stop_loss(
             trade,
             candle,
         ):
+        
 
             self._close_trade(
                 trade,
@@ -73,6 +96,8 @@ class ExitEngine(BaseEngine):
             )
 
             return trade
+        print("Checking Target...")
+
 
         if self._check_target(
             trade,
@@ -90,9 +115,19 @@ class ExitEngine(BaseEngine):
         # ---------------------------------------------
         # Mandatory Intraday Square Off
         # ---------------------------------------------
+        print("Force Exit Time :", CONFIG.FORCED_EXIT)
+        print(
+            "Time Compare    :",
+            candle.timestamp.time(),
+            ">=",
+            CONFIG.FORCED_EXIT,
+            "=",
+            candle.timestamp.time() >= CONFIG.FORCED_EXIT,
+        )
+        print("Checking Forced Exit...")
 
         if candle.timestamp.time() >= CONFIG.FORCED_EXIT:
-
+            print("***** FORCED EXIT TRIGGERED *****")
             self._close_trade(
                 trade,
                 candle,
@@ -188,6 +223,12 @@ class ExitEngine(BaseEngine):
         Close the trade and update its final state.
         """
 
+        print("\n========== TRADE CLOSED ==========")
+        print("Trade ID :", trade.trade_id)
+        print("Reason   :", reason)
+        print("Time     :", candle.timestamp)
+        print("==================================")
+
         trade.status = TradeStatus.CLOSED
         trade.exit_reason = reason
         trade.exit_time = candle.timestamp
@@ -202,6 +243,10 @@ class ExitEngine(BaseEngine):
             trade.exit_price = candle.close
 
         self._calculate_pnl(trade)
+
+    
+
+    
 
     def _calculate_pnl(
         self,

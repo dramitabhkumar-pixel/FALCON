@@ -2,12 +2,12 @@
 =========================================================
 PROJECT FALCON
 Confluence Result Model
-Version : 1.0
+Version : 2.0
 =========================================================
 
 Represents the output of the Confluence Engine.
 
-This model contains ONLY the confluence evaluation.
+Contains ONLY confluence evaluation.
 No business logic belongs here.
 """
 
@@ -21,13 +21,6 @@ from models.enums import Direction
 class ConfluenceResult:
     """
     Result produced by the Confluence Engine.
-
-    This model represents whether the various
-    confluence conditions required by the strategy
-    have been satisfied.
-
-    It does NOT calculate confidence, grades,
-    or trading decisions.
     """
 
     # =====================================================
@@ -40,28 +33,21 @@ class ConfluenceResult:
     # Confluence Confirmations
     # =====================================================
 
-    trend_alignment: bool = False
+    
 
-    structure_alignment: bool = False
-
-    ema_alignment: bool = False
     adx_confirmation: bool = False
+
     rsi_confirmation: bool = False
 
-    
+    atr_confirmation: bool = False
 
     liquidity_confirmation: bool = False
 
-    
-
     golden_zone_confirmation: bool = False
 
-    bos_confirmation: bool = False
-
-    choch_confirmation: bool = False
-
     
 
+    daily_bias_confirmation: bool = False
     
 
     # =====================================================

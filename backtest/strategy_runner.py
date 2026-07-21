@@ -176,11 +176,7 @@ class StrategyRunner:
 
             )
 
-        volume = 0.0
-
-        if "volume" in dataframe.columns:
-
-            volume = float(row["volume"])
+        
 
         return Candle(
 
@@ -193,8 +189,9 @@ class StrategyRunner:
             low=float(row["low"]),
 
             close=float(row["close"]),
+            volume=float(row["volume"]) if "volume" in row.index else 0.0,
 
-            volume=volume,
+           
 
         )
 
@@ -247,7 +244,13 @@ class StrategyRunner:
             )
 
             if not indicator.valid:
-                return None
+                print(
+                    "RETURNING -> Indicator Invalid :",
+                    df.index[-1]
+                )
+                return None        
+        
+            
 
             # ---------------------------------------------
             # Current Price
@@ -269,8 +272,9 @@ class StrategyRunner:
                rsi=indicator.rsi,
                adx=indicator.adx,
                atr=indicator.atr,
-               avg_atr=indicator.avg_atr,
-               volume=indicator.volume,
+               atr_ma=indicator.atr_ma,
+               
+               
                close=close,
             )
                
@@ -280,9 +284,17 @@ class StrategyRunner:
                
             
             if setup is None:
+                print(
+                "RETURNING -> Setup None :",
+                df.index[-1]
+            )
                 return None
 
             if not setup.valid:
+                print(
+                    "RETURNING -> Setup Invalid :",
+                    df.index[-1]
+                )
                 return None
 
             # ---------------------------------------------
@@ -296,7 +308,10 @@ class StrategyRunner:
             # ---------------------------------------------
             # Execute Strategy
             # ---------------------------------------------
-
+            print(
+                "CALLING STRATEGY ENGINE :",
+                candle.timestamp
+            )
             decision = self.strategy_engine.process(
 
                 setup=setup,

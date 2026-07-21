@@ -50,7 +50,14 @@ class Structure(FalconEnum):
     BULLISH = "BULLISH"
     BEARISH = "BEARISH"
 
+class EntryType(FalconEnum):
+    """
+    Entry execution style.
+    """
 
+    PULLBACK = "PULLBACK"
+    MOMENTUM = "MOMENTUM"
+    
 class StructureEvent(FalconEnum):
     NONE = "NONE"
     BOS_BULLISH = "BOS_BULLISH"

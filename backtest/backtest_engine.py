@@ -173,6 +173,11 @@ class BacktestEngine:
         df = self._normalize(
         dataframe,
         )
+        print("\nFIRST INDEX :", df.index[0])
+        print("LAST INDEX  :", df.index[-1])
+        print("\nLAST 10 INDEX VALUES")
+        print(df.index[-10:])
+        print(df.columns.tolist())
         self.trade_log.clear()
 
         minimum = self._minimum_bars()
@@ -195,6 +200,13 @@ class BacktestEngine:
             history = df.iloc[
                 : index + 1
             ].copy()
+            print(history.index[-1])
+            
+            if "timestamp" in history.columns:
+                print("BACKTEST :", history.iloc[-1]["timestamp"])
+            
+            else:
+                print("BACKTEST INDEX :", history.index[-1])
 
 
 

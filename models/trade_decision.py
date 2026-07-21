@@ -25,6 +25,7 @@ from models.enums import (
     ExitReason,
     Trend,
     Structure,
+    EntryType,
 )
 
 
@@ -66,6 +67,12 @@ class TradeDecision:
 
     entry_price: float = 0.0
     entry_time: datetime | None = None
+
+    # =====================================================
+    # Entry Classification
+    # =====================================================
+
+    entry_type: EntryType = EntryType.MOMENTUM
 
     # =====================================================
     # Risk Management

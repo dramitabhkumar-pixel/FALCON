@@ -40,7 +40,7 @@ class TradeSetup:
     # Market Context
     # =====================================================
 
-    trend: Trend = Trend.RANGE
+    trend: Trend = Trend.UNKNOWN
 
     bias: Bias = Bias.NEUTRAL
 
@@ -70,7 +70,7 @@ class TradeSetup:
 
     high_volatility: bool = False
 
-    volume: float = 0.0
+    
 
     # =====================================================
     # Smart Money Concepts
@@ -82,17 +82,16 @@ class TradeSetup:
 
     golden_zone: bool = False
 
-    bos: bool = False
+    
 
-    choch: bool = False
+    
 
     equal_highs: bool = False
 
     equal_lows: bool = False
 
-    order_block: bool = False
-
-    fair_value_gap: bool = False
+    
+    
 
     # =====================================================
     # Expected Trade Direction

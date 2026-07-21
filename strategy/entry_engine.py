@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from config.strategy_config import CONFIG
+from strategy.strategy_config import CONFIG
 
 from core.candles import Candle
 from models.trade_setup import TradeSetup
@@ -36,6 +36,7 @@ from models.confidence_result import ConfidenceResult
 from models.enums import (
     Direction,
     TradeStatus,
+    EntryType,
 )
 
 
@@ -90,31 +91,21 @@ class EntryEngine:
         )
 
         decision = TradeDecision()
-
+ 
+        print("\n========== ENTRY INPUT ==========")
+        print("Setup Direction        :", setup.direction)
+        print("Setup Valid            :", setup.valid)
+        print("Confidence Score       :", confidence.confidence_score)
+        print("Confidence Pass        :", confidence.minimum_confidence_met)
+        print("Current Price          :", setup.current_price)
+        print("=================================\n")
         
 
         # -------------------------------------------------
         # Business Validation
         # -------------------------------------------------
-
-        if not setup.valid:
-             print("ENTRY FAIL -> setup.valid = False")
-             return decision
-
-        if not confidence.valid:
-             print("ENTRY FAIL -> confidence.valid = False")
-             return decision
-
         if not confidence.minimum_confidence_met:
-            print("\nENTRY FAIL -> CONFIDENCE")
-            print("Score :", confidence.confidence_score)
-            print("Grade :", confidence.grade)
-            print("Reasons:")
-            for reason in confidence.reasons:
-                print("   ", reason)
-            
             return decision
-
         if setup.direction not in (
             Direction.LONG,
             Direction.SHORT,
@@ -125,8 +116,29 @@ class EntryEngine:
         # -------------------------------------------------
         # Calculate Levels
         # -------------------------------------------------
+        if setup.golden_zone:
+            entry_type = EntryType.PULLBACK
+        else:
+            entry_type = EntryType.MOMENTUM
 
-        entry_price = setup.current_price
+        if entry_type == EntryType.PULLBACK:
+
+            entry_price = setup.current_price
+
+        elif entry_type == EntryType.MOMENTUM:
+
+            entry_price = candle.close
+
+        else:
+
+            raise ValueError(f"Unsupported entry type: {entry_type}")
+        print("\n========== SWING DEBUG ==========")
+        print("Swing High :", setup.swing_high)
+        print("Swing Low  :", setup.swing_low)
+        print("ATR        :", setup.atr)
+        print("Direction  :", setup.direction)
+        print("=================================\n")
+
 
         stop_loss = self._calculate_stop_loss(
             setup,
@@ -188,7 +200,7 @@ class EntryEngine:
         )
 
         decision.quantity = (
-            CONFIG.MINIMUM_POSITION_SIZE
+            CONFIG.POSITION_SIZE
         )
 
         decision.entry_price = round(
@@ -231,6 +243,7 @@ class EntryEngine:
         decision.status = (
             TradeStatus.ACTIVE
         )
+        decision.entry_type = entry_type
 
 
         return decision
